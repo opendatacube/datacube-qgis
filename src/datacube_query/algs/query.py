@@ -8,12 +8,6 @@ __revision__ = '$Format:%H$'
 
 import os
 
-from qgis.PyQt.QtCore import QSettings, qVersion
-try:
-    import qgis2compat.apicompat #Monkey patch QGIS2 to mock QGIS 3 API
-except ImportError:
-    pass
-    #TODO check QGIS version and fail gracefully if we can't run Q3
 from qgis.core import QgsRasterLayer, QgsProject, QgsMapLayerRegistry
 
 from processing.core.GeoAlgorithm import GeoAlgorithm
