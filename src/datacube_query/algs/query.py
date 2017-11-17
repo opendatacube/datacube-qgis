@@ -45,7 +45,7 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
     INPUT_DATE_RANGE = 'INPUT_DATE_RANGE'
     INPUT_EXTENT = 'INPUT_EXTENT'
 
-    #TODO Bool Add to TOC?
+    #TODO Bool "Add outputs to TOC?
 
     def __init__(self):
         GeoAlgorithm.__init__(self)
@@ -69,7 +69,7 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
             self.tr('Input measurements')))
         self.addParameter(ParameterString(self.INPUT_DATE_RANGE,
             self.tr('Input date range')))
-        self.addParameter(ParameterString(self.INPUT_EXTENT,
+        self.addParameter(ParameterExtent(self.INPUT_EXTENT,
             self.tr('Input extent')))
 
         self.addOutput(OutputDirectory(self.OUTPUT_DIRECTORY,
@@ -96,7 +96,8 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
         #             'extent',
         #             translator=self.tr)
         date_range = [s.strip() for s in date_range.split(',')]
-        extent = [float(f) for f in extent.split(',')]
+        xmin, xmax, ymin, ymax = [float(f) for f in extent.split(',')]
+        extent = xmin, ymin, xmax, ymax
         measurements = [s.strip() for s in measurements.split(',')]
 
         #TODO Progress (QProgressBar+iface.messageBar/iface.mainWindow().showMessage)
