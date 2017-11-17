@@ -34,18 +34,20 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
     OUTPUT_DIRECTORY = 'Output Directory'
 
     #TODO INPUT_PRODUCT is for proof of concept only
-    INPUT_PRODUCT = 'Input Product'
-    INPUT_MEASUREMENTS = 'Input Measurements'
+    INPUT_PRODUCT = 'Product'
+    INPUT_MEASUREMENTS = 'Measurements'
     #INPUT_PRODUCT_TYPE = 'Input Product Type'
     #platform
     #instrument
     #INPUT_ADD_TO_MAP = 'Add query results to map' #Bool
     #/TODO
 
-    INPUT_DATE_RANGE = 'INPUT_DATE_RANGE'
-    INPUT_EXTENT = 'INPUT_EXTENT'
+    INPUT_DATE_RANGE = 'Date range'
+    INPUT_EXTENT = 'Query extent'
+    INPUT_CRS = 'Query extent CRS (if not WGS84/EPSG:4326)'
 
-    #TODO Bool "Add outputs to TOC?
+    # TODO Bool "Add outputs to TOC?
+    # TODO error handling with GeoAlgorithmExecutionException
 
     def __init__(self):
         GeoAlgorithm.__init__(self)
@@ -64,16 +66,18 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
         self.group = 'Data Cube Query' #TODO can there be a top level alg, not under a folder?
 
         self.addParameter(ParameterString(self.INPUT_PRODUCT,
-            self.tr('Input product')))
+            self.tr(self.INPUT_PRODUCT)))
         self.addParameter(ParameterString(self.INPUT_MEASUREMENTS,
-            self.tr('Input measurements')))
+            self.tr(self.INPUT_MEASUREMENTS)))
         self.addParameter(ParameterString(self.INPUT_DATE_RANGE,
-            self.tr('Input date range')))
+            self.tr(self.INPUT_DATE_RANGE)))
         self.addParameter(ParameterExtent(self.INPUT_EXTENT,
-            self.tr('Input extent')))
+            self.tr(self.INPUT_EXTENT)))
+        self.addParameter(ParameterCrs(self.INPUT_CRS,
+            self.tr(self.INPUT_CRS), default='EPSG:4326'))
 
         self.addOutput(OutputDirectory(self.OUTPUT_DIRECTORY,
-            self.tr('Output location')))
+            self.tr(self.OUTPUT_DIRECTORY)))
 
     def processAlgorithm(self, progress):
         """Here is where the processing itself takes place."""
@@ -82,19 +86,18 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
         config_file = config_file if config_file else None
 
         product = self.getParameterValue(self.INPUT_PRODUCT)
+        measurements = self.getParameterValue(self.INPUT_MEASUREMENTS)
         date_range = self.getParameterValue(self.INPUT_DATE_RANGE)
         extent = self.getParameterValue(self.INPUT_EXTENT)
-        measurements = self.getParameterValue(self.INPUT_MEASUREMENTS)
+        crs = self.getParameterValue(self.INPUT_CRS)
         #TODO add_results = self.getParameterValue(self.INPUT_ADD_TO_MAP)
         add_results = True
         output_directory = self.getOutputValue(self.OUTPUT_DIRECTORY)
 
-        # log_message(str(config_file),
-        #             'config_file',
-        #             translator=self.tr)
         # log_message(extent,
         #             'extent',
         #             translator=self.tr)
+
         date_range = [s.strip() for s in date_range.split(',')]
         xmin, xmax, ymin, ymax = [float(f) for f in extent.split(',')]
         extent = xmin, ymin, xmax, ymax
@@ -109,6 +112,7 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
                          measurements,
                          date_range,
                          extent,
+                         str(crs),
                          config=config_file)
 
         if data is None:

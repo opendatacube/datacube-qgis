@@ -16,8 +16,7 @@ from datacube.helpers import write_geotiff
 
 __revision__ = '$Format:%H$'
 
-#def datacube_connection(config=None):
-#    dc = datacube.Datacube(config=config)
+# TODO Refactor and move qgis specific code to a separate module?
 
 def get_icon(basename):
     filepath = os.path.join(
@@ -47,18 +46,20 @@ def log_message(message, title=None,
     QgsMessageLog.logMessage(message, title, level)
 
 
-def run_query(output_directory, product, measurements, date_range, extent, config=None):
+def run_query(output_directory, product, measurements, date_range, extent, crs, config=None):
 
+    # Use dask
     dc = datacube.Datacube(config=config, app='QGIS Plugin')
 
-    #TODO folder for temp output (vsimem/temp dir).
+    # TODO folder for temp output (vsimem/temp dir).
     #  - Check mem avail and check/estimate xarray size (inc. lazy via dask?)
     output_directory = '/vsimem' #tempfile.mkdtemp()
     xmin, ymin, xmax, ymax = extent
-    query = {'product':product,
-             'lon':(xmin, xmax),
-             'lat':(ymin, ymax),
+    query = {'product': product,
+             'x': (xmin, xmax),
+             'y': (ymin, ymax),
              'time':date_range,
+             'crs': crs
             }
 
     query = datacube.api.query.Query(**query)
