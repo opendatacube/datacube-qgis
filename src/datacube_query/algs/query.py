@@ -7,18 +7,22 @@ __copyright__ = '(C) 2017 by Geoscience Australia'
 __revision__ = '$Format:%H$'
 
 import os
+from datetime import date
 
-from qgis.core import QgsRasterLayer, QgsProject, QgsMapLayerRegistry
+from qgis.core import QgsRasterLayer, QgsMapLayerRegistry
 
 from processing.core.GeoAlgorithm import GeoAlgorithm
 from processing.core.parameters import ParameterCrs, ParameterExtent
-from processing.core.parameters import ParameterRange, ParameterString
-from processing.core.ProcessingConfig import Setting, ProcessingConfig
+# from processing.core.parameters import ParameterString # TODO in QGIS 3
+from processing.core.parameters import ParameterBoolean, ParameterString
+from processing.core.ProcessingConfig import ProcessingConfig
 from processing.core.outputs import OutputDirectory
 
 from ..utils import (get_icon, run_query,
                      log_message, write_geotiff,
                      datetime_to_str)
+
+# from ..parameters import ParameterDateRange # TODO in QGIS 3
 
 
 class DataCubeQueryAlgorithm(GeoAlgorithm):
@@ -33,18 +37,22 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
 
     OUTPUT_DIRECTORY = 'Output Directory'
 
-    #TODO INPUT_PRODUCT is for proof of concept only
-    INPUT_PRODUCT = 'Product'
-    INPUT_MEASUREMENTS = 'Measurements'
-    #INPUT_PRODUCT_TYPE = 'Input Product Type'
-    #platform
-    #instrument
-    #INPUT_ADD_TO_MAP = 'Add query results to map' #Bool
-    #/TODO
+    # TODO PARAM_PRODUCT is for proof of concept only
+    PARAM_PRODUCT = 'Product'
+    PARAM_MEASUREMENTS = 'Measurements'
+    # PARAM_PRODUCT_TYPE = 'Input Product Type'
+    # platform
+    # instrument
+    # PARAM_ADD_TO_MAP = 'Add query results to map' #Bool
+    # /TODO
 
-    INPUT_DATE_RANGE = 'Date range'
-    INPUT_EXTENT = 'Query extent'
-    INPUT_CRS = 'Query extent CRS (if not WGS84/EPSG:4326)'
+    # TODO QGIS3
+    PARAM_DATE_RANGE = 'Date range (Y-M-D, Y-M-D)'
+    # PARAM_DATE_RANGE = 'Date range'
+    # / TODO
+    PARAM_EXTENT = 'Query extent'
+    PARAM_CRS = 'Query extent CRS (if not WGS84/EPSG:4326)'
+    PARAM_FORMAT = 'Write NetCDF instead of GeoTIFF?'
 
     # TODO Bool "Add outputs to TOC?
     # TODO error handling with GeoAlgorithmExecutionException
@@ -63,21 +71,27 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
         self.name = 'Data Cube Query'
 
         # The branch of the toolbox under which the algorithm will appear
-        self.group = 'Data Cube Query' #TODO can there be a top level alg, not under a folder?
+        self.group = 'Data Cube Query'  # TODO can there be a top level alg, not under a folder?
 
-        self.addParameter(ParameterString(self.INPUT_PRODUCT,
-            self.tr(self.INPUT_PRODUCT)))
-        self.addParameter(ParameterString(self.INPUT_MEASUREMENTS,
-            self.tr(self.INPUT_MEASUREMENTS)))
-        self.addParameter(ParameterString(self.INPUT_DATE_RANGE,
-            self.tr(self.INPUT_DATE_RANGE)))
-        self.addParameter(ParameterExtent(self.INPUT_EXTENT,
-            self.tr(self.INPUT_EXTENT)))
-        self.addParameter(ParameterCrs(self.INPUT_CRS,
-            self.tr(self.INPUT_CRS), default='EPSG:4326'))
+        self.addParameter(ParameterString(self.PARAM_PRODUCT,
+                                          self.tr(self.PARAM_PRODUCT)))
+        self.addParameter(ParameterString(self.PARAM_MEASUREMENTS,
+                                          self.tr(self.PARAM_MEASUREMENTS)))
+        # TODO QGIS 3
+        # self.addParameter(ParameterDateRange(self.PARAM_DATE_RANGE, self.tr(self.PARAM_DATE_RANGE)))
+        qgis2_date_default = '{ymd},{ymd}'.format(ymd=date.today().strftime('%Y-%m-%d'))
+        self.addParameter(ParameterString(self.PARAM_DATE_RANGE,
+                                          self.tr(self.PARAM_DATE_RANGE),
+                                          default=qgis2_date_default))
+        # / TODO
+        self.addParameter(ParameterExtent(self.PARAM_EXTENT,
+                                          self.tr(self.PARAM_EXTENT)))
+        self.addParameter(ParameterCrs(self.PARAM_CRS,  # TODO Can this be updated from the canvas/selected layer
+                                       self.tr(self.PARAM_CRS), default='EPSG:4326'))
+        self.addParameter(ParameterBoolean(self.PARAM_FORMAT,
+                                       self.tr(self.PARAM_FORMAT), default=False))
 
-        self.addOutput(OutputDirectory(self.OUTPUT_DIRECTORY,
-            self.tr(self.OUTPUT_DIRECTORY)))
+        self.addOutput(OutputDirectory(self.OUTPUT_DIRECTORY, self.tr(self.OUTPUT_DIRECTORY)))
 
     def processAlgorithm(self, progress):
         """Here is where the processing itself takes place."""
@@ -85,12 +99,12 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
         config_file = ProcessingConfig.getSetting('datacube_config_file')
         config_file = config_file if config_file else None
 
-        product = self.getParameterValue(self.INPUT_PRODUCT)
-        measurements = self.getParameterValue(self.INPUT_MEASUREMENTS)
-        date_range = self.getParameterValue(self.INPUT_DATE_RANGE)
-        extent = self.getParameterValue(self.INPUT_EXTENT)
-        crs = self.getParameterValue(self.INPUT_CRS)
-        #TODO add_results = self.getParameterValue(self.INPUT_ADD_TO_MAP)
+        product = self.getParameterValue(self.PARAM_PRODUCT)
+        measurements = self.getParameterValue(self.PARAM_MEASUREMENTS)
+        date_range = self.getParameterValue(self.PARAM_DATE_RANGE)
+        extent = self.getParameterValue(self.PARAM_EXTENT)
+        crs = self.getParameterValue(self.PARAM_CRS)
+        # TODO add_results = self.getParameterValue(self.PARAM_ADD_TO_MAP)
         add_results = True
         output_directory = self.getOutputValue(self.OUTPUT_DIRECTORY)
 
@@ -103,10 +117,10 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
         extent = xmin, ymin, xmax, ymax
         measurements = [s.strip() for s in measurements.split(',')]
 
-        #TODO Progress (QProgressBar+iface.messageBar/iface.mainWindow().showMessage)
-        #TODO Debug Logging
-        #TODO Error handling
-        #
+        # TODO Progress (QProgressBar+iface.messageBar/iface.mainWindow().showMessage)
+        # TODO Debug Logging
+        # TODO Error handling
+
         data = run_query(output_directory,
                          product,
                          measurements,
@@ -125,7 +139,8 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
             write_geotiff(raster_path, data, time_index=i)
             if add_results:
                 raster_lyr = QgsRasterLayer(raster_path, raster)
-                #toc_tree = QgsProject.instance().layerTreeRoot()
-                #toc_tree.insertLayer(i, raster_lyr)
+                # TODO QGIS 3
+                # toc_tree = QgsProject.instance().layerTreeRoot()
+                # toc_tree.insertLayer(i, raster_lyr)
                 QgsMapLayerRegistry.instance().addMapLayer(raster_lyr)
 
