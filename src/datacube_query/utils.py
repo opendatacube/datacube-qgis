@@ -1,8 +1,8 @@
 import os
 from datetime import date
-import tempfile
 
 import numpy as np
+import pandas as pd
 
 from qgis.core import QgsMessageLog
 from qgis.PyQt.QtGui import QIcon
@@ -10,7 +10,6 @@ from qgis.PyQt.QtCore import QCoreApplication
 
 import datacube
 import datacube.api
-from datacube.helpers import write_geotiff
 
 # This will get replaced with a git SHA1 when you do a git archive
 
@@ -27,12 +26,19 @@ def get_icon(basename):
     return QIcon(filepath)
 
 
-def get_products_and_measurements(platform=None, instrument=None):
-    pass #TODO - use to populate parameters dynamically
-    # products = dc.list_products()
-    # display_columns = ['name', 'description', 'platform', 'instrument', 'crs', 'resolution']
-    # nbar_products = products[products['product_type'] == 'nbar'][display_columns].dropna()
-
+def get_products_and_measurements(config=None):
+    dc = datacube.Datacube(config=config)
+    products = dc.list_products()
+    measurements = dc.list_measurements()
+    products = products.rename(columns={'name': 'product'})
+    measurements.reset_index(inplace=True)
+    display_columns = ['product_type', 'product', 'description']
+    products = products[display_columns]
+    display_columns = ['measurement', 'aliases', 'dtype', 'units', 'product']
+    measurements = measurements[display_columns]
+    prodmeas = pd.merge(products, measurements, how='left', on=['product'])
+    prodmeas.set_index(['product_type', 'product', 'description'], inplace=True)  # , drop=False)
+    return prodmeas
 
 def log_message(message, title=None,
                 level=QgsMessageLog.INFO,
@@ -46,14 +52,11 @@ def log_message(message, title=None,
     QgsMessageLog.logMessage(message, title, level)
 
 
-def run_query(output_directory, product, measurements, date_range, extent, crs, config=None):
+def run_query(product, measurements, date_range, extent, crs, config=None):
 
-    # Use dask
+    # TODO Use dask
     dc = datacube.Datacube(config=config, app='QGIS Plugin')
 
-    # TODO folder for temp output (vsimem/temp dir).
-    #  - Check mem avail and check/estimate xarray size (inc. lazy via dask?)
-    output_directory = '/vsimem' #tempfile.mkdtemp()
     xmin, ymin, xmax, ymax = extent
     query = {'product': product,
              'x': (xmin, xmax),
@@ -66,7 +69,7 @@ def run_query(output_directory, product, measurements, date_range, extent, crs, 
     datasets = dc.index.datasets.search_eager(**query.search_terms)
 
     if not datasets:
-        #raise RuntimeError('No datasets found')
+        # raise RuntimeError('No datasets found')
         return
 
     #TODO Masking
@@ -76,6 +79,14 @@ def run_query(output_directory, product, measurements, date_range, extent, crs, 
     data = dc.load(group_by='solar_day',
                    measurements=measurements,
                    **query.search_terms)
+
+    # TODO report upstream (datacube-core)
+    # rasterio.dtypes doesn't support'int8'
+    # so datacube.helpers.write_geotiff fails with FC datasets
+    for val in data.data_vars:
+        if data[val].dtype == 'int8':
+            data[val] = data[val].astype('uint8')
+    # /TODO
 
     return data
 
@@ -87,3 +98,4 @@ def datetime_to_str(datetime64, format='%Y-%m-%d'):
 
     dt = date.fromtimestamp(dt)
     return dt.strftime(format)
+

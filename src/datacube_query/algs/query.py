@@ -18,9 +18,10 @@ from processing.core.parameters import ParameterBoolean, ParameterString
 from processing.core.ProcessingConfig import ProcessingConfig
 from processing.core.outputs import OutputDirectory
 
-from ..utils import (get_icon, run_query,
-                     log_message, write_geotiff,
-                     datetime_to_str)
+from datacube.helpers import write_geotiff
+from datacube.storage.storage import write_dataset_to_netcdf as write_netcdf
+
+from ..utils import (get_icon, run_query, log_message, datetime_to_str)
 
 # from ..parameters import ParameterDateRange # TODO in QGIS 3
 
@@ -88,14 +89,14 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
                                           self.tr(self.PARAM_EXTENT)))
         self.addParameter(ParameterCrs(self.PARAM_CRS,  # TODO Can this be updated from the canvas/selected layer
                                        self.tr(self.PARAM_CRS), default='EPSG:4326'))
-        self.addParameter(ParameterBoolean(self.PARAM_FORMAT,
-                                       self.tr(self.PARAM_FORMAT), default=False))
-
+        param = ParameterBoolean(self.PARAM_FORMAT,
+                                 self.tr(self.PARAM_FORMAT), default=False)
+        param.isAdvanced = True
+        self.addParameter(param)
         self.addOutput(OutputDirectory(self.OUTPUT_DIRECTORY, self.tr(self.OUTPUT_DIRECTORY)))
 
     def processAlgorithm(self, progress):
         """Here is where the processing itself takes place."""
-
         config_file = ProcessingConfig.getSetting('datacube_config_file')
         config_file = config_file if config_file else None
 
@@ -106,11 +107,8 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
         crs = self.getParameterValue(self.PARAM_CRS)
         # TODO add_results = self.getParameterValue(self.PARAM_ADD_TO_MAP)
         add_results = True
+        output_netcdf = self.getParameterValue(self.PARAM_FORMAT)
         output_directory = self.getOutputValue(self.OUTPUT_DIRECTORY)
-
-        # log_message(extent,
-        #             'extent',
-        #             translator=self.tr)
 
         date_range = [s.strip() for s in date_range.split(',')]
         xmin, xmax, ymin, ymax = [float(f) for f in extent.split(',')]
@@ -121,8 +119,7 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
         # TODO Debug Logging
         # TODO Error handling
 
-        data = run_query(output_directory,
-                         product,
+        data = run_query(product,
                          measurements,
                          date_range,
                          extent,
@@ -132,15 +129,37 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
         if data is None:
             raise RuntimeError('No data found')
 
-        basename = '{}_{}_{}.tif'.format(product, '_'.join(measurements),'{}')
-        for i, dt in enumerate(data.time):
-            raster = basename.format(datetime_to_str(dt))
-            raster_path = os.path.join(output_directory, raster)
-            write_geotiff(raster_path, data, time_index=i)
-            if add_results:
-                raster_lyr = QgsRasterLayer(raster_path, raster)
-                # TODO QGIS 3
-                # toc_tree = QgsProject.instance().layerTreeRoot()
-                # toc_tree.insertLayer(i, raster_lyr)
-                QgsMapLayerRegistry.instance().addMapLayer(raster_lyr)
+        # TODO folder for temp output (vsimem/temp dir).
+        #  - Check mem avail and check/estimate xarray size (inc. lazy via dask?)
+        # output_directory = '/vsimem'  # tempfile.mkdtemp()
+        # TODO Refactor this outta here.
+        basename = '{}_{}_{}'.format(product, '_'.join(measurements),'{}')
+        basepath = os.path.join(output_directory, basename)
 
+        if output_netcdf:
+            ext = '.nc'
+            start_date = datetime_to_str(data.time[0])
+            end_date = datetime_to_str(data.time[-1])
+            dt = '{}_{}'.format(start_date, end_date)
+            raster_path = basepath.format(dt) + ext
+            write_netcdf(data, raster_path)
+
+            if add_results:
+                for measurement in measurements:
+                    layer_name = '{}_{}_{}'.format(product, measurement, dt)
+                    nc_path = 'NETCDF:"{}":{}'.format(raster_path, measurement)
+                    raster_lyr = QgsRasterLayer(nc_path, layer_name)
+                    QgsMapLayerRegistry.instance().addMapLayer(raster_lyr)
+        else:
+            ext = '.tif'
+            rasters = []
+            for i, dt in enumerate(data.time):
+                dt = datetime_to_str(dt)
+                raster_path = basepath.format(dt) + ext
+                write_geotiff(raster_path, data, time_index=i)
+
+                if add_results:
+                    raster_lyr = QgsRasterLayer(raster_path, basename.format(dt))
+                    QgsMapLayerRegistry.instance().addMapLayer(raster_lyr)
+
+        # TODO return rasters

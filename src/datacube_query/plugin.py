@@ -40,7 +40,7 @@ class DataCubeQueryPlugin:
     def __init__(self):
         self.provider = DataCubeQueryProvider()
 
-    def initGui(self):
+    def initGui(self):  #pylint: disable=
         Processing.addProvider(self.provider)
 
     def unload(self):

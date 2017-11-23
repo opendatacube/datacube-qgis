@@ -25,8 +25,9 @@ __revision__ = '$Format:%H$'
 from processing.core.AlgorithmProvider import AlgorithmProvider
 from processing.core.ProcessingConfig import Setting, ProcessingConfig
 
-from .algs.simple_query import SimpleDataCubeQueryAlgorithm
 from .algs.query import DataCubeQueryAlgorithm
+from .algs.list_products import DataCubeListAlgorithm
+
 from .utils import get_icon
 
 
@@ -51,8 +52,8 @@ class DataCubeQueryProvider(AlgorithmProvider):
         self.activate = False
 
         # Load algorithms
-        self.alglist = [SimpleDataCubeQueryAlgorithm(),
-                        DataCubeQueryAlgorithm()]
+        self.alglist = [DataCubeQueryAlgorithm(),
+                        DataCubeListAlgorithm()]
         for alg in self.alglist:
             alg.provider = self
 
