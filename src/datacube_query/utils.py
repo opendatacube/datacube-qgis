@@ -102,11 +102,11 @@ def run_query(product, measurements, date_range, extent, crs, config=None):
     return data
 
 
-def datetime_to_str(datetime64, format='%Y-%m-%d'):
+def datetime_to_str(datetime64, str_format='%Y-%m-%d'):
 
     # datetime64 has nanosecond resolution so convert to millisecs
     dt = datetime64.astype(np.int64) // 1000000000
 
     dt = date.fromtimestamp(dt)
-    return dt.strftime(format)
+    return dt.strftime(str_format)
 
