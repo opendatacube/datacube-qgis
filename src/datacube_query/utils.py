@@ -6,16 +6,15 @@ import pandas as pd
 
 from qgis.core import QgsMessageLog
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtCore import QCoreApplication
 
 import datacube
 import datacube.api
 
 # This will get replaced with a git SHA1 when you do a git archive
-
 __revision__ = '$Format:%H$'
 
 # TODO Refactor and move qgis specific code to a separate module?
+
 
 def get_icon(basename):
     filepath = os.path.join(
@@ -26,7 +25,16 @@ def get_icon(basename):
     return QIcon(filepath)
 
 
-def get_products_and_measurements(config=None):
+def get_products(config=None):
+    # TODO
+    dc = datacube.Datacube(config=config)
+    products = dc.list_products()
+    products = products[['name', 'description']]
+    products.set_index('name', inplace=True)
+    return products.to_dict('index')
+
+
+def get_products_and_measurements(product=None, config=None):
     dc = datacube.Datacube(config=config)
     products = dc.list_products()
     measurements = dc.list_measurements()
@@ -37,17 +45,20 @@ def get_products_and_measurements(config=None):
     display_columns = ['measurement', 'aliases', 'dtype', 'units', 'product']
     measurements = measurements[display_columns]
     prodmeas = pd.merge(products, measurements, how='left', on=['product'])
+    if product is not None:
+        prodmeas = prodmeas[prodmeas['product'] == product]
     prodmeas.set_index(['product_type', 'product', 'description'], inplace=True)  # , drop=False)
     return prodmeas
 
+
 def log_message(message, title=None,
                 level=QgsMessageLog.INFO,
-                translator=QCoreApplication.translate):
+                translator=None):
 
-    message = translator(message, message)
-
-    if title is not None:
-        title = translator(title,title)
+    if translator is not None:
+        message = translator(message, message)
+        if title is not None:
+            title = translator(title, title)
 
     QgsMessageLog.logMessage(message, title, level)
 
