@@ -18,10 +18,9 @@ from processing.core.parameters import ParameterBoolean, ParameterString
 from processing.core.ProcessingConfig import ProcessingConfig
 from processing.core.outputs import OutputDirectory
 
-from datacube.helpers import write_geotiff
 from datacube.storage.storage import write_dataset_to_netcdf as write_netcdf
 
-from ..utils import (get_icon, run_query, log_message, datetime_to_str)
+from ..utils import (get_icon, run_query, log_message, datetime_to_str, write_geotiff)
 
 # from ..parameters import ParameterDateRange # TODO in QGIS 3
 
@@ -156,7 +155,8 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
             for i, dt in enumerate(data.time):
                 dt = datetime_to_str(dt)
                 raster_path = basepath.format(dt) + ext
-                write_geotiff(raster_path, data, time_index=i)
+                # TODO add advanced param/s for overview stuff
+                write_geotiff(raster_path, data, time_index=i, overviews=True)
 
                 if add_results:
                     raster_lyr = QgsRasterLayer(raster_path, basename.format(dt))

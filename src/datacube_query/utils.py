@@ -3,17 +3,30 @@ from datetime import date
 
 import numpy as np
 import pandas as pd
+import rasterio as rio
+from rasterio.enums import Resampling, Compression
 
 from qgis.core import QgsMessageLog
 from qgis.PyQt.QtGui import QIcon
 
 import datacube
 import datacube.api
+from datacube.helpers import write_geotiff as _write_geotiff
+# from datacube.helpers import DEFAULT_PROFILE
 
 # This will get replaced with a git SHA1 when you do a git archive
 __revision__ = '$Format:%H$'
 
 # TODO Refactor and move qgis specific code to a separate module?
+# TODO GeoTIFF options and overviews
+
+COMPRESSION = [c.value for c in Compression]
+RESAMPLING = {r.name: r for r in Resampling if r.name in ['nearest', 'cubic', 'average', 'mode', 'gauss']}
+
+DEFAULT_OVERVIEWS = {'compression': 'LZW', # TODO figure out how rio handles overview compression options
+                     'resampling': 'average',
+                     'factors': [2, 4, 8, 16, 32],
+                     'internal_storage': True}
 
 
 def get_icon(basename):
@@ -83,7 +96,7 @@ def run_query(product, measurements, date_range, extent, crs, config=None):
         # raise RuntimeError('No datasets found')
         return
 
-    #TODO Masking
+    # TODO Masking
     # - test for PQ product
     # - apply default mask
 
@@ -110,3 +123,25 @@ def datetime_to_str(datetime64, str_format='%Y-%m-%d'):
     dt = date.fromtimestamp(dt)
     return dt.strftime(str_format)
 
+
+def build_overviews(filename, overview_options):
+    options = DEFAULT_OVERVIEWS.copy()
+    if overview_options is not None:
+        options.update(overview_options)
+    if options['internal_storage']:
+        mode = 'r+'
+    else:
+        mode = 'r'
+
+    resampling = RESAMPLING[options['resampling']]
+    with rio.open(filename, mode) as raster:
+        raster.build_overviews(options['factors'], resampling)
+        raster.update_tags(ns='rio_overview', resampling=options['resampling'])
+
+
+def write_geotiff(filename, dataset, time_index=None,
+                  profile_override=None, overviews=False, overview_options=None):
+
+    _write_geotiff(filename, dataset, time_index, profile_override)
+    if overviews:
+        build_overviews(filename, overview_options)
