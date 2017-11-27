@@ -22,13 +22,15 @@ __copyright__ = '(C) 2017 by Geoscience Australia'
 
 __revision__ = '$Format:%H$'
 
+import json
+
 from processing.core.AlgorithmProvider import AlgorithmProvider
 from processing.core.ProcessingConfig import Setting, ProcessingConfig
 
 from .algs.query import DataCubeQueryAlgorithm
 from .algs.list_products import DataCubeListAlgorithm
 
-from .utils import get_icon
+from .utils import get_icon, GTIFF_DEFAULTS, GTIFF_OVR_DEFAULTS
 
 
 class DataCubeQueryProvider(AlgorithmProvider):
@@ -37,13 +39,28 @@ class DataCubeQueryProvider(AlgorithmProvider):
     DESCRIPTION = 'Open Data Cube Algorithms'
 
     def __init__(self):
-
+        # TODO - add GDAL/rio format and overview creation options as settings
         self.settings = [
             Setting(DataCubeQueryProvider.DESCRIPTION,
                     'datacube_config_file',
                     self.tr("Open Data Cube database config file"),
                     '',
                     valuetype=Setting.FILE),
+            Setting(DataCubeQueryProvider.DESCRIPTION,
+                    'build_overviews',
+                    self.tr("Build GeoTiff Overviews"),
+                    default=True,
+                    valuetype=None),
+            Setting(DataCubeQueryProvider.DESCRIPTION,
+                    'gtiff_options',
+                    self.tr("GeoTiff Creation Options"),
+                    default=json.dumps(GTIFF_DEFAULTS),
+                    valuetype=Setting.STRING),
+            Setting(DataCubeQueryProvider.DESCRIPTION,
+                    'gtiff_ovr_options',
+                    self.tr("GeoTiff Overview Options"),
+                    default=json.dumps(GTIFF_OVR_DEFAULTS),
+                    valuetype=Setting.STRING),
         ]
 
         AlgorithmProvider.__init__(self)

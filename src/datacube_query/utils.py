@@ -20,11 +20,19 @@ __revision__ = '$Format:%H$'
 # TODO Refactor and move qgis specific code to a separate module?
 # TODO GeoTIFF options and overviews
 
-COMPRESSION = [c.value for c in Compression]
-RESAMPLING = {r.name: r for r in Resampling if r.name in ['nearest', 'cubic', 'average', 'mode', 'gauss']}
+GTIFF_COMPRESSION = [c.value for c in Compression]
 
-DEFAULT_OVERVIEWS = {'compression': 'LZW', # TODO figure out how rio handles overview compression options
-                     'resampling': 'average',
+GTIFF_DEFAULTS = {"interleave": "band", "tiled": True,
+                  "blockxsize": 256, "blockysize": 256,
+                  "compress": "lzw", "predictor": 1,
+                  "tfw": False, "jpeg_quality": 75,
+                  "profile": "GDALGeoTIFF",
+                  "bigtiff": "IF_NEEDED", "geotiff_keys_flavor": "STANDARD"}
+
+GTIFF_OVR_RESAMPLING = {r.name: r for r in Resampling
+                        if r.name in ['nearest', 'cubic', 'average', 'mode', 'gauss']}
+
+GTIFF_OVR_DEFAULTS = {'resampling': 'average',
                      'factors': [2, 4, 8, 16, 32],
                      'internal_storage': True}
 
@@ -76,7 +84,7 @@ def log_message(message, title=None,
     QgsMessageLog.logMessage(message, title, level)
 
 
-def run_query(product, measurements, date_range, extent, crs, config=None):
+def run_query(product, measurements, date_range, extent, query_crs, output_crs, output_res, config=None):
 
     # TODO Use dask
     dc = datacube.Datacube(config=config, app='QGIS Plugin')
@@ -86,8 +94,12 @@ def run_query(product, measurements, date_range, extent, crs, config=None):
              'x': (xmin, xmax),
              'y': (ymin, ymax),
              'time':date_range,
-             'crs': crs
+             'crs': str(query_crs)
             }
+    if output_crs is not None:
+        query['output_crs'] = str(output_crs)
+    if output_res is not None:
+        query['output_res'] = output_res
 
     query = datacube.api.query.Query(**query)
     datasets = dc.index.datasets.search_eager(**query.search_terms)
@@ -137,6 +149,11 @@ def build_overviews(filename, overview_options):
     with rio.open(filename, mode) as raster:
         raster.build_overviews(options['factors'], resampling)
         raster.update_tags(ns='rio_overview', resampling=options['resampling'])
+
+
+def update_tags(filename, bidx=0, ns=None, **kwargs):
+    with rio.open(filename, 'r+') as raster:
+        raster.update_tags(bidx=bidx, ns=ns, **kwargs)
 
 
 def write_geotiff(filename, dataset, time_index=None,

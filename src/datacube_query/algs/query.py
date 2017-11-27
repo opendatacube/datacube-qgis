@@ -8,19 +8,22 @@ __revision__ = '$Format:%H$'
 
 import os
 from datetime import date
+import json
 
 from qgis.core import QgsRasterLayer, QgsMapLayerRegistry
 
 from processing.core.GeoAlgorithm import GeoAlgorithm
-from processing.core.parameters import ParameterCrs, ParameterExtent
+from processing.core.parameters import (ParameterBoolean, ParameterCrs,
+                                        ParameterExtent, ParameterRange,
+                                        ParameterString)
+
 # from processing.core.parameters import ParameterString # TODO in QGIS 3
-from processing.core.parameters import ParameterBoolean, ParameterString
 from processing.core.ProcessingConfig import ProcessingConfig
 from processing.core.outputs import OutputDirectory
 
 from datacube.storage.storage import write_dataset_to_netcdf as write_netcdf
 
-from ..utils import (get_icon, run_query, log_message, datetime_to_str, write_geotiff)
+from ..utils import (get_icon, run_query, log_message, datetime_to_str, update_tags, write_geotiff)
 
 # from ..parameters import ParameterDateRange # TODO in QGIS 3
 
@@ -39,7 +42,7 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
 
     # TODO PARAM_PRODUCT is for proof of concept only
     PARAM_PRODUCT = 'Product'
-    PARAM_MEASUREMENTS = 'Measurements'
+    PARAM_MEASUREMENTS = 'Measurements (comma separated list)'
     # PARAM_PRODUCT_TYPE = 'Input Product Type'
     # platform
     # instrument
@@ -47,12 +50,18 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
     # /TODO
 
     # TODO QGIS3
-    PARAM_DATE_RANGE = 'Date range (Y-M-D, Y-M-D)'
+    PARAM_DATE_RANGE = 'Date range (YYY-MM-DD, YYY-MM-DD)'
     # PARAM_DATE_RANGE = 'Date range'
     # / TODO
     PARAM_EXTENT = 'Query extent'
-    PARAM_CRS = 'Query extent CRS (if not WGS84/EPSG:4326)'
+    PARAM_EXTENT_CRS = 'Query extent CRS (if not WGS84/EPSG:4326)'
+
+    # Advanced params
+    PARAM_OVERVIEWS = 'Build overviews for output GeoTIFFs?'
     PARAM_FORMAT = 'Write NetCDF instead of GeoTIFF?'
+    PARAM_OUTPUT_CRS = 'Output CRS (required for products with no CRS defined)'
+    PARAM_OUTPUT_RESOLUTION = ('Output resolution  (N or N,N, '
+                               'required for products with no resolution defined)')
 
     # TODO Bool "Add outputs to TOC?
     # TODO error handling with GeoAlgorithmExecutionException
@@ -73,10 +82,12 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
         # The branch of the toolbox under which the algorithm will appear
         self.group = 'Data Cube Query'  # TODO can there be a top level alg, not under a folder?
 
+        # Basic Params
         self.addParameter(ParameterString(self.PARAM_PRODUCT,
                                           self.tr(self.PARAM_PRODUCT)))
         self.addParameter(ParameterString(self.PARAM_MEASUREMENTS,
-                                          self.tr(self.PARAM_MEASUREMENTS)))
+                                          self.tr(self.PARAM_MEASUREMENTS),
+                                          optional=True, multiline=True))
         # TODO QGIS 3
         # self.addParameter(ParameterDateRange(self.PARAM_DATE_RANGE, self.tr(self.PARAM_DATE_RANGE)))
         qgis2_date_default = '{ymd},{ymd}'.format(ymd=date.today().strftime('%Y-%m-%d'))
@@ -86,33 +97,61 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
         # / TODO
         self.addParameter(ParameterExtent(self.PARAM_EXTENT,
                                           self.tr(self.PARAM_EXTENT)))
-        self.addParameter(ParameterCrs(self.PARAM_CRS,  # TODO Can this be updated from the canvas/selected layer
-                                       self.tr(self.PARAM_CRS), default='EPSG:4326'))
+        self.addParameter(ParameterCrs(self.PARAM_EXTENT_CRS,  # TODO Can this be updated from the canvas/selected layer
+                                       self.tr(self.PARAM_EXTENT_CRS), default='EPSG:4326'))
+
+        # "Advanced" Params (just to reduce interface clutter)
+        param = ParameterBoolean(self.PARAM_OVERVIEWS,
+                                 self.tr(self.PARAM_OVERVIEWS), default=False)
+        param.isAdvanced = True
+        self.addParameter(param)
         param = ParameterBoolean(self.PARAM_FORMAT,
                                  self.tr(self.PARAM_FORMAT), default=False)
         param.isAdvanced = True
         self.addParameter(param)
+
+        param = ParameterCrs(self.PARAM_OUTPUT_CRS, self.tr(self.PARAM_OUTPUT_CRS), optional=True)
+        param.isAdvanced = True
+        self.addParameter(param)
+
+        # param = ParameterRange(self.PARAM_OUTPUT_RESOLUTION, self.tr(self.PARAM_OUTPUT_RESOLUTION),
+        #                        optional=True, default='0,0')
+        param = ParameterString(self.PARAM_OUTPUT_RESOLUTION, self.tr(self.PARAM_OUTPUT_RESOLUTION),
+                               optional=True, default=None)
+        param.isAdvanced = True
+        self.addParameter(param)
+
+        # Output/s
         self.addOutput(OutputDirectory(self.OUTPUT_DIRECTORY, self.tr(self.OUTPUT_DIRECTORY)))
 
     def processAlgorithm(self, progress):
         """Here is where the processing itself takes place."""
         config_file = ProcessingConfig.getSetting('datacube_config_file')
         config_file = config_file if config_file else None
+        gtiff_profile = json.loads(ProcessingConfig.getSetting('gtiff_options'))
 
         product = self.getParameterValue(self.PARAM_PRODUCT)
         measurements = self.getParameterValue(self.PARAM_MEASUREMENTS)
         date_range = self.getParameterValue(self.PARAM_DATE_RANGE)
         extent = self.getParameterValue(self.PARAM_EXTENT)
-        crs = self.getParameterValue(self.PARAM_CRS)
+        crs = self.getParameterValue(self.PARAM_EXTENT_CRS)
         # TODO add_results = self.getParameterValue(self.PARAM_ADD_TO_MAP)
         add_results = True
+        overviews = self.getParameterValue(self.PARAM_OVERVIEWS)
         output_netcdf = self.getParameterValue(self.PARAM_FORMAT)
+        output_crs = self.getParameterValue(self.PARAM_OUTPUT_CRS)
+        output_crs = None if not output_crs else output_crs
+        # output_res = self.getParameterFromName(self.PARAM_OUTPUT_RESOLUTION)
+        # output_res = None if output_res.value == output_res.default else (float(r) for r in output_res.value.split(','))
+        output_res = self.getParameterValue(self.PARAM_OUTPUT_RESOLUTION)
+        output_res = None if not output_res else (float(r) for r in output_res.split(','))
+
         output_directory = self.getOutputValue(self.OUTPUT_DIRECTORY)
 
         date_range = [s.strip() for s in date_range.split(',')]
         xmin, xmax, ymin, ymax = [float(f) for f in extent.split(',')]
         extent = xmin, ymin, xmax, ymax
-        measurements = [s.strip() for s in measurements.split(',')]
+        measurements = [s.strip() for s in measurements.split(',')] if measurements else None
 
         # TODO Progress (QProgressBar+iface.messageBar/iface.mainWindow().showMessage)
         # TODO Debug Logging
@@ -122,8 +161,11 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
                          measurements,
                          date_range,
                          extent,
-                         str(crs),
-                         config=config_file)
+                         crs,
+                         output_crs,
+                         output_res,
+                         config_file,
+                         )
 
         if data is None:
             raise RuntimeError('No data found')
@@ -132,7 +174,9 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
         #  - Check mem avail and check/estimate xarray size (inc. lazy via dask?)
         # output_directory = '/vsimem'  # tempfile.mkdtemp()
         # TODO Refactor this outta here.
-        basename = '{}_{}_{}'.format(product, '_'.join(measurements),'{}')
+        #if measurements is not None:
+        #    basename = '{}_{}_{}'.format(product, '_'.join(measurements),'{}')
+        basename = '{}_{}'.format(product, '{}')
         basepath = os.path.join(output_directory, basename)
 
         if output_netcdf:
@@ -153,13 +197,19 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
             ext = '.tif'
             rasters = []
             for i, dt in enumerate(data.time):
-                dt = datetime_to_str(dt)
-                raster_path = basepath.format(dt) + ext
+                ds = datetime_to_str(dt)
+                raster_path = basepath.format(ds) + ext
                 # TODO add advanced param/s for overview stuff
-                write_geotiff(raster_path, data, time_index=i, overviews=True)
+                write_geotiff(raster_path, data, time_index=i,
+                              overviews=overviews, profile_override=gtiff_profile)
+                update_tags(raster_path, TIFFTAG_DATETIME=datetime_to_str(dt, '%Y:%m:%d %H:%M:%S'))
 
                 if add_results:
-                    raster_lyr = QgsRasterLayer(raster_path, basename.format(dt))
+                    raster_lyr = QgsRasterLayer(raster_path, basename.format(ds))
                     QgsMapLayerRegistry.instance().addMapLayer(raster_lyr)
 
         # TODO return rasters
+
+    def checkParameterValuesBeforeExecuting(self, *args, **kwargs):
+        pass
+        # TODO make PARAM_FORMAT==True and PARAM_OVERVIEWS==True mutually exclusive?
