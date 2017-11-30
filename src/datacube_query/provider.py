@@ -30,7 +30,8 @@ from processing.core.ProcessingConfig import Setting, ProcessingConfig
 from .algs.query import DataCubeQueryAlgorithm
 from .algs.list_products import DataCubeListAlgorithm
 
-from .utils import get_icon, GTIFF_DEFAULTS, GTIFF_OVR_DEFAULTS
+from .utils import get_icon
+from .defaults import (GTIFF_OVR_DEFAULTS, GTIFF_DEFAULTS)
 
 
 class DataCubeQueryProvider(AlgorithmProvider):

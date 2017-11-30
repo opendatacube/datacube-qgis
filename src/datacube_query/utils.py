@@ -5,7 +5,6 @@ import dask.array
 import numpy as np
 import pandas as pd
 import rasterio as rio
-from rasterio.enums import Resampling, Compression
 
 from qgis.core import QgsMessageLog
 from qgis.PyQt.QtGui import QIcon
@@ -13,27 +12,16 @@ from qgis.PyQt.QtGui import QIcon
 import datacube
 import datacube.api
 
+from .defaults import (GTIFF_OVR_DEFAULTS,
+                       GTIFF_COMPRESSION,
+                       GTIFF_DEFAULTS,
+                       GTIFF_OVR_RESAMPLING)
+
 # This will get replaced with a git SHA1 when you do a git archive
 __revision__ = '$Format:%H$'
 
 # TODO Refactor and move qgis specific code to a separate module?
 # TODO GeoTIFF options and overviews
-
-GTIFF_COMPRESSION = [c.value for c in Compression]
-
-GTIFF_DEFAULTS = {"interleave": "band", "tiled": True,
-                  "blockxsize": 256, "blockysize": 256,
-                  "compress": "lzw", "predictor": 1,
-                  "tfw": False, "jpeg_quality": 75,
-                  "profile": "GDALGeoTIFF",
-                  "bigtiff": "IF_NEEDED", "geotiff_keys_flavor": "STANDARD"}
-
-GTIFF_OVR_RESAMPLING = {r.name: r for r in Resampling
-                        if r.name in ['nearest', 'cubic', 'average', 'mode', 'gauss']}
-
-GTIFF_OVR_DEFAULTS = {'resampling': 'average',
-                     'factors': [2, 4, 8, 16, 32],
-                     'internal_storage': True}
 
 
 def get_icon(basename):
