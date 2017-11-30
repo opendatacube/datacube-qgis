@@ -5,6 +5,7 @@ import dask.array
 import numpy as np
 import pandas as pd
 import rasterio as rio
+from rasterio.dtypes import check_dtype
 
 from qgis.core import QgsMessageLog
 from qgis.PyQt.QtGui import QIcon
@@ -105,14 +106,6 @@ def run_query(product, measurements, date_range, extent, query_crs, output_crs, 
                    dask_chunks=dask_chunks,
                    **query.search_terms)
 
-    # TODO report upstream (datacube-core)
-    # rasterio.dtypes doesn't support'int8'
-    # so datacube.helpers.write_geotiff fails with FC datasets
-    for val in data.data_vars:
-        if data[val].dtype == 'int8':
-            data[val] = data[val].astype('uint8')
-    # /TODO
-
     return data
 
 
@@ -144,6 +137,27 @@ def calc_stats(filename, stats_options):
     pass # TODO
 
 
+def upcast(dataset, old_dtype):
+    """ Upcast to next dtype of same kind, i.e. from int to int16 """
+
+    old_dtype = np.dtype(old_dtype)  # Ensure old dtype is an np.dtype instance (i.e. not a string)
+    dtype = np.dtype(old_dtype.kind + str(old_dtype.itemsize * 2))
+
+    # dataset.astype strips attrs, so save them
+    dataset_attrs = dataset.attrs
+    datavar_attrs = {var: val.attrs for var, val in dataset.data_vars.items()}
+
+    # Upcast
+    dataset = dataset.astype(dtype) # loses attrs
+
+    # Re-add attrs
+    dataset.attrs.update(**dataset_attrs)
+    for var, val in dataset.data_vars.items():
+        val.attrs.update(**datavar_attrs[var])
+
+    return dataset, dtype
+
+
 def update_tags(filename, bidx=0, ns=None, **kwargs):
     with rio.open(filename, 'r+') as raster:
         raster.update_tags(bidx=bidx, ns=ns, **kwargs)
@@ -152,8 +166,10 @@ def update_tags(filename, bidx=0, ns=None, **kwargs):
 def write_geotiff(filename, dataset, time_index=None, profile_override=None):
     """
     Write an xarray dataset to a geotiff
-        Modified from datacube.helpers.write_geotiff to support dask lazy arrays
-        and arrays with no time dimension
+        Modified from datacube.helpers.write_geotiff to support:
+            - dask lazy arrays,
+            - arrays with no time dimension
+            - Nodata values
         https://github.com/opendatacube/datacube-core/blob/develop/datacube/helpers.py
         Original code licensed under the Apache License, Version 2.0 (the "License");
 
@@ -168,20 +184,30 @@ def write_geotiff(filename, dataset, time_index=None, profile_override=None):
 
     dtypes = {val.dtype for val in dataset.data_vars.values()}
     assert len(dtypes) == 1  # Check for multiple dtypes
+    dtype = dtypes.pop()
 
-    profile = DEFAULT_PROFILE.copy()
+    if not check_dtype(dtype):  # Check for invalid dtypes
+        dataset, dtype = upcast(dataset, dtype)
+
+    profile = GTIFF_DEFAULTS.copy()
     profile.update({
         'width': dataset.dims[dataset.crs.dimensions[1]],
         'height': dataset.dims[dataset.crs.dimensions[0]],
         'affine': dataset.affine,
         'crs': dataset.crs.crs_str,
         'count': len(dataset.data_vars),
-        'dtype': str(dtypes.pop())
+        'dtype': str(dtype)
     })
     profile.update(profile_override)
 
     with rio.open(str(filename), 'w', **profile) as dest:
         for bandnum, data in enumerate(dataset.data_vars.values(), start=1):
+            try:
+                nodata = data.nodata
+                profile.update({'nodata': nodata})
+            except AttributeError:
+                pass
+
             if time_index is None:
                 data = data.data
             else:
