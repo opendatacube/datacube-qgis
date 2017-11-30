@@ -161,6 +161,8 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
         dask_chunks = {'time': 1}
         #dask_chunks = None #{'time': 1, 'x': 8192, 'y': 8192}
 
+        stats = False # TODO from Settings
+
         # TODO Progress (QProgressBar+iface.messageBar/iface.mainWindow().showMessage)
         # TODO Debug Logging
         # TODO Error handling
