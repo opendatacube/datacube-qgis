@@ -1,15 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-/***************************************************************************
- DataCubeQuery
-                                 A QGIS plugin
- Query and view data stored in an Open Data Cube (https://www.opendatacube.org)
-                              -------------------
-        begin                : 2017-11-09
-        copyright            : (C) 2017 by Geoscience Australia
-        email                : luke.pinner@ga.gov.au
- ***************************************************************************/
-
  This script initializes the plugin, making it known to QGIS.
 """
 

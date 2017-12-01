@@ -28,7 +28,7 @@ repository=https://github.com/lpinner/opendatacube-qgis
 # Tags are comma separated with spaces allowed
 tags=remote sensing, raster
 
-homepage=https://github.com/lpinner/opendatacube-qgis/issues
+homepage=https://github.com/lpinner/opendatacube-qgis
 category=Analysis
 icon=icon.png
 # experimental flag

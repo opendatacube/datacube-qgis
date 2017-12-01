@@ -159,7 +159,6 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
         extent = xmin, ymin, xmax, ymax
         measurements = [s.strip() for s in measurements.split(',')] if measurements else None
         dask_chunks = {'time': 1}
-        #dask_chunks = None #{'time': 1, 'x': 8192, 'y': 8192}
 
         stats = False # TODO from Settings
 
