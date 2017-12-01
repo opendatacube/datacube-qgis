@@ -12,17 +12,18 @@ import qgis.utils
 QGIS_VERSION = qgis.utils.QGis.QGIS_VERSION
 QGIS_VERSION_INT = qgis.utils.QGis.QGIS_VERSION_INT
 
+
 # noinspection PyPep8Naming
 def classFactory(iface):  # pylint: disable=invalid-name
     """Load DataCubeQuery class from file DataCubeQuery.
 
         :param iface: A QGIS interface instance.
         :type iface: QgsInterface
-        """
+    """
     #
-    #Monkey patch QGIS2 to mock QGIS 3 API
-    if QGIS_VERSION_INT < 30000: #TODO or not TODO - This won't work for dev/preview
-                                 #i.e QGIS 2.99...
+    # Monkey patch QGIS2 to mock QGIS 3 API
+    if QGIS_VERSION_INT < 30000:    # TODO or not TODO - This won't work for dev/preview
+                                    # i.e QGIS 2.99...
         if QGIS_VERSION_INT >= 21400:
             try:
                 import qgis2compat.apicompat
@@ -32,9 +33,8 @@ def classFactory(iface):  # pylint: disable=invalid-name
                            'restart QGIS.')
                 raise ImportError(message)
         else:
-            message = ('The DataCubeQuery Plugin requires QGIS >=2.14')
+            message = 'The DataCubeQuery Plugin requires QGIS >=2.14'
             raise RuntimeError(message)
-
 
     from .plugin import DataCubeQueryPlugin
     return DataCubeQueryPlugin()
