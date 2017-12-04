@@ -7,10 +7,10 @@ __author__ = 'Geoscience Australia'
 __date__ = '2017-11-09'
 __copyright__ = '(C) 2017 by Geoscience Australia'
 
-import qgis.utils
+import qgis.core
 
-QGIS_VERSION = qgis.utils.QGis.QGIS_VERSION
-QGIS_VERSION_INT = qgis.utils.QGis.QGIS_VERSION_INT
+QGIS_VERSION = qgis.core.QGis.QGIS_VERSION
+QGIS_VERSION_INT = qgis.core.QGis.QGIS_VERSION_INT
 
 
 # noinspection PyPep8Naming
