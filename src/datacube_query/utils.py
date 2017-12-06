@@ -137,6 +137,13 @@ def calc_stats(filename, stats_options):
     pass # TODO
 
 
+def str_snip(str_to_snip, max_len, suffix='...'):
+    snip_len = max_len - len(suffix)
+    snipped = str_to_snip if len(str_to_snip) <= max_len else str_to_snip[:snip_len]+suffix
+    return snipped
+
+
+
 def upcast(dataset, old_dtype):
     """ Upcast to next dtype of same kind, i.e. from int to int16 """
 

@@ -7,14 +7,17 @@ __copyright__ = '(C) 2017 by Geoscience Australia'
 __revision__ = '$Format:%H$'
 
 import os
+from collections import defaultdict
 from datetime import date
 import json
+
+import pandas as pd
 
 from qgis.core import QgsRasterLayer, QgsMapLayerRegistry
 
 from processing.core.GeoAlgorithm import GeoAlgorithm
 from processing.core.parameters import (ParameterBoolean, ParameterCrs,
-                                        ParameterExtent, ParameterRange,
+                                        ParameterExtent, ParameterSelection,
                                         ParameterString)
 
 # from processing.core.parameters import ParameterString # TODO in QGIS 3
@@ -24,14 +27,18 @@ from processing.core.outputs import OutputDirectory
 from datacube.storage.storage import write_dataset_to_netcdf as write_netcdf
 
 from ..utils import (
-    get_icon,
-    run_query,
-    log_message,
+    build_overviews,
+    calc_stats,
     datetime_to_str,
+    get_icon,
+    get_products,
+    get_products_and_measurements,
+    run_query,
+    str_snip,
     update_tags,
     write_geotiff,
-    build_overviews,
-    calc_stats)
+)
+
 
 # from ..parameters import ParameterDateRange # TODO in QGIS 3
 
@@ -78,6 +85,10 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
         GeoAlgorithm.__init__(self)
 
         self._icon = get_icon('opendatacube.png')
+        self.products = {}
+        self.product_opts = []
+        self.measurements = defaultdict(list)
+        self.config_file = None
 
     def defineCharacteristics(self):
         """Here we define the inputs and output of the algorithm, along
@@ -91,8 +102,8 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
         self.group = 'Data Cube Query'  # TODO can there be a top level alg, not under a folder?
 
         # Basic Params
-        self.addParameter(ParameterString(self.PARAM_PRODUCT,
-                                          self.tr(self.PARAM_PRODUCT)))
+        self.addParameter(ParameterSelection(self.PARAM_PRODUCT,
+                                             self.tr(self.PARAM_PRODUCT)))
         self.addParameter(ParameterString(self.PARAM_MEASUREMENTS,
                                           self.tr(self.PARAM_MEASUREMENTS),
                                           optional=True, multiline=True))
@@ -139,7 +150,13 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
         overviews = ProcessingConfig.getSetting('build_overviews')
 
         # Parameters
-        product = self.getParameterValue(self.PARAM_PRODUCT)
+        product_idx = self.getParameterValue(self.PARAM_PRODUCT) # nu
+        try:
+            product_opt = self.product_opts[product_idx]
+            product = self.products[product_opt]
+        except TypeError: # If a name is passed directly as a string
+            product = product_idx
+
         measurements = self.getParameterValue(self.PARAM_MEASUREMENTS)
         date_range = self.getParameterValue(self.PARAM_DATE_RANGE)
         extent = self.getParameterValue(self.PARAM_EXTENT)
@@ -224,3 +241,26 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
     def checkParameterValuesBeforeExecuting(self, *args, **kwargs):
         pass
         # TODO make PARAM_FORMAT==True and PARAM_OVERVIEWS==True mutually exclusive?
+
+    def checkBeforeOpeningParametersDialog(self):
+        config_file = ProcessingConfig.getSetting('datacube_config_file')
+        self.config_file = config_file or None
+
+        measurements = get_products_and_measurements(config=self.config_file)
+        measurements = measurements.reset_index()[['product', 'measurement', 'aliases']]
+        for r in measurements.itertuples(False):
+            meas = None
+            try:
+                meas = [r.measurement] + r.aliases
+            except TypeError:
+                if pd.notna(r.measurement):
+                    meas = [r.measurement]
+            if meas:
+                self.measurements[r.product] += meas
+
+        prods = get_products(config=self.config_file).items()
+        self.products = {'{} ({})'.format(k, str_snip(v['description'], 75)):
+                         k for k, v in prods if k in self.measurements}
+
+        param = self.getParameterFromName(self.PARAM_PRODUCT)
+        param.options = self.product_opts = sorted(self.products.keys())
