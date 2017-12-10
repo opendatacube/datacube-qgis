@@ -25,6 +25,34 @@ __revision__ = '$Format:%H$'
 # TODO GeoTIFF options and overviews
 
 
+def build_overviews(filename, overview_options):
+    options = GTIFF_OVR_DEFAULTS.copy()
+    if overview_options is not None:
+        options.update(overview_options)
+    if options['internal_storage']:
+        mode = 'r+'
+    else:
+        mode = 'r'
+
+    resampling = GTIFF_OVR_RESAMPLING[options['resampling']]
+    with rio.open(filename, mode) as raster:
+        raster.build_overviews(options['factors'], resampling)
+        raster.update_tags(ns='rio_overview', resampling=options['resampling'])
+
+
+def calc_stats(filename, stats_options):
+    pass # TODO
+
+
+def datetime_to_str(datetime64, str_format='%Y-%m-%d'):
+
+    # datetime64 has nanosecond resolution so convert to millisecs
+    dt = datetime64.astype(np.int64) // 1000000000
+
+    dt = date.fromtimestamp(dt)
+    return dt.strftime(str_format)
+
+
 def get_icon(basename):
     filepath = os.path.join(
         os.path.dirname(__file__),
@@ -109,39 +137,10 @@ def run_query(product, measurements, date_range, extent, query_crs, output_crs, 
     return data
 
 
-def datetime_to_str(datetime64, str_format='%Y-%m-%d'):
-
-    # datetime64 has nanosecond resolution so convert to millisecs
-    dt = datetime64.astype(np.int64) // 1000000000
-
-    dt = date.fromtimestamp(dt)
-    return dt.strftime(str_format)
-
-
-def build_overviews(filename, overview_options):
-    options = GTIFF_OVR_DEFAULTS.copy()
-    if overview_options is not None:
-        options.update(overview_options)
-    if options['internal_storage']:
-        mode = 'r+'
-    else:
-        mode = 'r'
-
-    resampling = GTIFF_OVR_RESAMPLING[options['resampling']]
-    with rio.open(filename, mode) as raster:
-        raster.build_overviews(options['factors'], resampling)
-        raster.update_tags(ns='rio_overview', resampling=options['resampling'])
-
-
-def calc_stats(filename, stats_options):
-    pass # TODO
-
-
 def str_snip(str_to_snip, max_len, suffix='...'):
     snip_len = max_len - len(suffix)
     snipped = str_to_snip if len(str_to_snip) <= max_len else str_to_snip[:snip_len]+suffix
     return snipped
-
 
 
 def upcast(dataset, old_dtype):
