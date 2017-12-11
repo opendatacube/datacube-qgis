@@ -25,6 +25,34 @@ __revision__ = '$Format:%H$'
 # TODO GeoTIFF options and overviews
 
 
+def build_overviews(filename, overview_options):
+    options = GTIFF_OVR_DEFAULTS.copy()
+    if overview_options is not None:
+        options.update(overview_options)
+    if options['internal_storage']:
+        mode = 'r+'
+    else:
+        mode = 'r'
+
+    resampling = GTIFF_OVR_RESAMPLING[options['resampling']]
+    with rio.open(filename, mode) as raster:
+        raster.build_overviews(options['factors'], resampling)
+        raster.update_tags(ns='rio_overview', resampling=options['resampling'])
+
+
+def calc_stats(filename, stats_options):
+    pass # TODO
+
+
+def datetime_to_str(datetime64, str_format='%Y-%m-%d'):
+
+    # datetime64 has nanosecond resolution so convert to millisecs
+    dt = datetime64.astype(np.int64) // 1000000000
+
+    dt = date.fromtimestamp(dt)
+    return dt.strftime(str_format)
+
+
 def get_icon(basename):
     filepath = os.path.join(
         os.path.dirname(__file__),
@@ -75,66 +103,43 @@ def log_message(message, title=None,
 def run_query(product, measurements, date_range, extent, query_crs, output_crs, output_res,
               config=None, dask_chunks=None):
 
-    # TODO Use dask
     dc = datacube.Datacube(config=config, app='QGIS Plugin')
 
     xmin, ymin, xmax, ymax = extent
-    query = {'product': product,
-             'x': (xmin, xmax),
-             'y': (ymin, ymax),
-             'time':date_range,
-             'crs': str(query_crs)
-            }
-    if output_crs is not None:
-        query['output_crs'] = str(output_crs)
-    if output_res is not None:
-        query['output_res'] = output_res
+    query = dict(product=product, x=(xmin, xmax), y=(ymin, ymax), time=date_range, crs=str(query_crs))
 
-    query = datacube.api.query.Query(**query)
-    datasets = dc.index.datasets.search_eager(**query.search_terms)
+    query_obj = datacube.api.query.Query(**query)
+    # log_message(repr(query_obj.search_terms), 'index.datasets.search_eager')
+
+    datasets = dc.index.datasets.search_eager(**query_obj.search_terms)
 
     if not datasets:
-        # raise RuntimeError('No datasets found')
-        return
+        raise RuntimeError('No datasets found')
+        # return
 
     # TODO Masking
     # - test for PQ product
     # - apply default mask
 
-    data = dc.load(group_by='solar_day',
-                   measurements=measurements,
-                   dask_chunks=dask_chunks,
-                   **query.search_terms)
+    query['measurements'] = measurements
+    query['dask_chunks'] = dask_chunks
+    query['group_by'] = 'solar_day'
+    if output_crs is not None:
+        query['output_crs'] = str(output_crs)
+    if output_res is not None:
+        query['resolution'] = output_res
+
+    log_message(repr(query), 'Query')
+
+    data = dc.load(**query)
 
     return data
 
 
-def datetime_to_str(datetime64, str_format='%Y-%m-%d'):
-
-    # datetime64 has nanosecond resolution so convert to millisecs
-    dt = datetime64.astype(np.int64) // 1000000000
-
-    dt = date.fromtimestamp(dt)
-    return dt.strftime(str_format)
-
-
-def build_overviews(filename, overview_options):
-    options = GTIFF_OVR_DEFAULTS.copy()
-    if overview_options is not None:
-        options.update(overview_options)
-    if options['internal_storage']:
-        mode = 'r+'
-    else:
-        mode = 'r'
-
-    resampling = GTIFF_OVR_RESAMPLING[options['resampling']]
-    with rio.open(filename, mode) as raster:
-        raster.build_overviews(options['factors'], resampling)
-        raster.update_tags(ns='rio_overview', resampling=options['resampling'])
-
-
-def calc_stats(filename, stats_options):
-    pass # TODO
+def str_snip(str_to_snip, max_len, suffix='...'):
+    snip_len = max_len - len(suffix)
+    snipped = str_to_snip if len(str_to_snip) <= max_len else str_to_snip[:snip_len]+suffix
+    return snipped
 
 
 def upcast(dataset, old_dtype):
