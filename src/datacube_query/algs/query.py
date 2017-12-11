@@ -167,7 +167,9 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
         output_crs = self.getParameterValue(self.PARAM_OUTPUT_CRS)
         output_crs = None if not output_crs else output_crs
         output_res = self.getParameterValue(self.PARAM_OUTPUT_RESOLUTION)
-        output_res = None if not output_res else (float(r) for r in output_res.split(','))
+        output_res = None if not output_res else [float(r) for r in output_res.split(',')]
+        if output_res is not None and len(output_res) != 2:
+            output_res = [output_res[0], output_res[0]]
 
         output_directory = self.getOutputValue(self.OUTPUT_DIRECTORY)
 
@@ -239,10 +241,13 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
                     # TODO return rasters
 
     def checkParameterValuesBeforeExecuting(self, *args, **kwargs):
-        pass
+        self.update_products_measurements()
         # TODO make PARAM_FORMAT==True and PARAM_OVERVIEWS==True mutually exclusive?
 
     def checkBeforeOpeningParametersDialog(self):
+        self.update_products_measurements()
+
+    def update_products_measurements(self):
         config_file = ProcessingConfig.getSetting('datacube_config_file')
         self.config_file = config_file or None
 

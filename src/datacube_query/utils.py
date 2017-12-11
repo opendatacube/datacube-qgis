@@ -103,36 +103,35 @@ def log_message(message, title=None,
 def run_query(product, measurements, date_range, extent, query_crs, output_crs, output_res,
               config=None, dask_chunks=None):
 
-    # TODO Use dask
     dc = datacube.Datacube(config=config, app='QGIS Plugin')
 
     xmin, ymin, xmax, ymax = extent
-    query = {'product': product,
-             'x': (xmin, xmax),
-             'y': (ymin, ymax),
-             'time':date_range,
-             'crs': str(query_crs)
-            }
-    if output_crs is not None:
-        query['output_crs'] = str(output_crs)
-    if output_res is not None:
-        query['output_res'] = output_res
+    query = dict(product=product, x=(xmin, xmax), y=(ymin, ymax), time=date_range, crs=str(query_crs))
 
-    query = datacube.api.query.Query(**query)
-    datasets = dc.index.datasets.search_eager(**query.search_terms)
+    query_obj = datacube.api.query.Query(**query)
+    # log_message(repr(query_obj.search_terms), 'index.datasets.search_eager')
+
+    datasets = dc.index.datasets.search_eager(**query_obj.search_terms)
 
     if not datasets:
-        # raise RuntimeError('No datasets found')
-        return
+        raise RuntimeError('No datasets found')
+        # return
 
     # TODO Masking
     # - test for PQ product
     # - apply default mask
 
-    data = dc.load(group_by='solar_day',
-                   measurements=measurements,
-                   dask_chunks=dask_chunks,
-                   **query.search_terms)
+    query['measurements'] = measurements
+    query['dask_chunks'] = dask_chunks
+    query['group_by'] = 'solar_day'
+    if output_crs is not None:
+        query['output_crs'] = str(output_crs)
+    if output_res is not None:
+        query['resolution'] = output_res
+
+    log_message(repr(query), 'Query')
+
+    data = dc.load(**query)
 
     return data
 
