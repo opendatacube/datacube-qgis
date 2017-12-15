@@ -12,7 +12,8 @@ from processing.core.outputs import OutputHTML
 from processing.core.parameters import ParameterSelection
 from processing.tools.system import getTempFilename
 
-from ..utils import (get_icon, get_products_and_measurements, get_products, log_message)
+from ..qgisutils import (get_icon, log_message)
+from ..utils import (get_products_and_measurements, get_products)
 
 
 class DataCubeListAlgorithm(GeoAlgorithm):

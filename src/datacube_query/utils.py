@@ -7,9 +7,6 @@ import pandas as pd
 import rasterio as rio
 from rasterio.dtypes import check_dtype
 
-from qgis.core import QgsMessageLog
-from qgis.PyQt.QtGui import QIcon
-
 import datacube
 import datacube.api
 
@@ -53,15 +50,6 @@ def datetime_to_str(datetime64, str_format='%Y-%m-%d'):
     return dt.strftime(str_format)
 
 
-def get_icon(basename):
-    filepath = os.path.join(
-        os.path.dirname(__file__),
-        'icons',
-        basename
-    )
-    return QIcon(filepath)
-
-
 def get_products(config=None):
     # TODO
     dc = datacube.Datacube(config=config)
@@ -88,20 +76,19 @@ def get_products_and_measurements(product=None, config=None):
     return prodmeas
 
 
-def log_message(message, title=None,
-                level=QgsMessageLog.INFO,
-                translator=None):
+def lcase_dict(adict):
+    ret_dict = {}
+    for k, v in adict.iteritems():
+        try:
+            ret_dict[k.lower()] = v
+        except TypeError:
+            ret_dict[k] = v
 
-    if translator is not None:
-        message = translator(message, message)
-        if title is not None:
-            title = translator(title, title)
-
-    QgsMessageLog.logMessage(message, title, level)
+    return ret_dict
 
 
-def run_query(product, measurements, date_range, extent, query_crs, output_crs, output_res,
-              config=None, dask_chunks=None):
+def run_query(product, measurements, date_range, extent, query_crs,
+              output_crs=None, output_res=None, config=None, dask_chunks=None):
 
     dc = datacube.Datacube(config=config, app='QGIS Plugin')
 
@@ -194,16 +181,27 @@ def write_geotiff(filename, dataset, time_index=None, profile_override=None):
     if not check_dtype(dtype):  # Check for invalid dtypes
         dataset, dtype = upcast(dataset, dtype)
 
+    dimx = dataset.dims[dataset.crs.dimensions[1]]
+    dimy = dataset.dims[dataset.crs.dimensions[0]]
+
     profile = GTIFF_DEFAULTS.copy()
     profile.update({
-        'width': dataset.dims[dataset.crs.dimensions[1]],
-        'height': dataset.dims[dataset.crs.dimensions[0]],
+        'width': dimx,
+        'height': dimy,
         'affine': dataset.affine,
         'crs': dataset.crs.crs_str,
         'count': len(dataset.data_vars),
         'dtype': str(dtype)
     })
     profile.update(profile_override)
+    profile = lcase_dict(profile)
+
+    blockx = profile.get('blockxsize')
+    blocky = profile.get('blockysize')
+    if (blockx and blockx > dimx) or (blocky and blocky > dimy):
+        del profile['blockxsize']
+        del profile['blockysize']
+        profile['tiled'] = False
 
     with rio.open(str(filename), 'w', **profile) as dest:
         for bandnum, data in enumerate(dataset.data_vars.values(), start=1):

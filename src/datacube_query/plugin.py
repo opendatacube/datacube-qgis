@@ -28,6 +28,7 @@ import inspect
 
 from processing.core.Processing import Processing
 from .provider import DataCubeQueryProvider
+from .qgisutils import get_icon
 
 cmd_folder = os.path.split(inspect.getfile(inspect.currentframe()))[0]
 
@@ -45,3 +46,6 @@ class DataCubeQueryPlugin:
 
     def unload(self):
         Processing.removeProvider(self.provider)
+
+    def getIcon(self):
+        return get_icon('opendatacube.png')

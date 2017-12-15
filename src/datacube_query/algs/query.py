@@ -26,11 +26,12 @@ from processing.core.outputs import OutputDirectory
 
 from datacube.storage.storage import write_dataset_to_netcdf as write_netcdf
 
+from ..qgisutils import get_icon, log_message
+
 from ..utils import (
     build_overviews,
     calc_stats,
     datetime_to_str,
-    get_icon,
     get_products,
     get_products_and_measurements,
     run_query,
@@ -38,6 +39,7 @@ from ..utils import (
     update_tags,
     write_geotiff,
 )
+
 
 
 # from ..parameters import ParameterDateRange # TODO in QGIS 3
