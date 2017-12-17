@@ -9,8 +9,8 @@ __copyright__ = '(C) 2017 by Geoscience Australia'
 
 import qgis.core
 
-QGIS_VERSION = qgis.core.QGis.QGIS_VERSION
-QGIS_VERSION_INT = qgis.core.QGis.QGIS_VERSION_INT
+QGIS_VERSION = qgis.core.Qgis.QGIS_VERSION
+QGIS_VERSION_INT = qgis.core.Qgis.QGIS_VERSION_INT
 
 
 # noinspection PyPep8Naming
@@ -22,8 +22,7 @@ def classFactory(iface):  # pylint: disable=invalid-name
     """
     #
     # Monkey patch QGIS2 to mock QGIS 3 API
-    if QGIS_VERSION_INT < 30000:    # TODO or not TODO - This won't work for dev/preview
-                                    # i.e QGIS 2.99...
+    if QGIS_VERSION_INT < 29900:  #29900 = QGIS 3 Dev build, 30000 will be 3.0
         if QGIS_VERSION_INT >= 21400:
             try:
                 import qgis2compat.apicompat
