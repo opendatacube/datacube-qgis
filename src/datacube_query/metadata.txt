@@ -30,7 +30,7 @@ tags=remote sensing, raster
 
 homepage=https://github.com/lpinner/opendatacube-qgis
 category=Analysis
-icon=icon.png
+icon=icons/opendatacube.png
 # experimental flag
 experimental=True
 #experimental=False
