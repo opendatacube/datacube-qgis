@@ -22,6 +22,26 @@ __copyright__ = '(C) 2017 by Geoscience Australia'
 
 __revision__ = '$Format:%H$'
 
+try:
+    import qgis2compat.apicompat
+except ImportError:
+    pass # pass for now, catch later if qgis.core.Qgis raises an AttributeError
+
+import qgis.core
+
+try:
+    QGIS_VERSION = qgis.core.Qgis.QGIS_VERSION
+    QGIS_VERSION_INT = qgis.core.Qgis.QGIS_VERSION_INT
+    assert QGIS_VERSION_INT >= 21400
+except AttributeError:
+    message = ('The DataCubeQuery Plugin uses the QGIS2compat plugin. '
+               'Please install it with the plugin manager and '
+               'restart QGIS.')
+    raise ImportError(message)
+except AssertionError:
+    message = ('The DataCubeQuery Plugin requires QGIS >=2.14')
+    raise ImportError(message)
+
 import os
 import sys
 import inspect
