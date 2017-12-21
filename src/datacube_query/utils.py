@@ -96,7 +96,6 @@ def run_query(product, measurements, date_range, extent, query_crs,
     query = dict(product=product, x=(xmin, xmax), y=(ymin, ymax), time=date_range, crs=str(query_crs))
 
     query_obj = datacube.api.query.Query(**query)
-    # log_message(repr(query_obj.search_terms), 'index.datasets.search_eager')
 
     datasets = dc.index.datasets.search_eager(**query_obj.search_terms)
 
@@ -115,8 +114,6 @@ def run_query(product, measurements, date_range, extent, query_crs,
         query['output_crs'] = str(output_crs)
     if output_res is not None:
         query['resolution'] = output_res
-
-    log_message(repr(query), 'Query')
 
     data = dc.load(**query)
 
