@@ -4,21 +4,20 @@
 # embedding metadata in __init__.py will 
 # is no longer supported since version 2.0.
 
-# This file should be included when you package your plugin.# Mandatory items:
+# This file should be included when you package your plugin.
 
 [general]
+
+# Mandatory items:
 name=Open Data Cube Query
 qgisMinimumVersion=2.14
 description=Query and view data stored in an Open Data Cube (https://www.opendatacube.org)
 version=0.1
 author=Geoscience Australia
 email=luke.pinner@ga.gov.au
-
 about=Query and view data stored in an Open Data Cube (https://www.opendatacube.org).
-
 tracker=https://github.com/lpinner/opendatacube-qgis/issues
 repository=https://github.com/lpinner/opendatacube-qgis
-# End of mandatory metadata
 
 # Recommended items:
 
