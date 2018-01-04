@@ -6,51 +6,57 @@ __copyright__ = '(C) 2017 by Geoscience Australia'
 # This will get replaced with a git SHA1 when you do a git archive
 __revision__ = '$Format:%H$'
 
-from processing.core.GeoAlgorithm import GeoAlgorithm
 from processing.core.ProcessingConfig import ProcessingConfig
-from processing.core.outputs import OutputHTML
-from processing.core.parameters import ParameterSelection
+from processing.core.outputs import QgsProcessingOutputHtml as OutputHTML
+from processing.core.parameters import QgsProcessingParameterEnum as ParameterEnum
 from processing.tools.system import getTempFilename
+
+from .base import BaseAlgorithm
 
 from ..qgisutils import (get_icon, log_message)
 from ..utils import (get_products_and_measurements, get_products)
 
 
-class DataCubeListAlgorithm(GeoAlgorithm):
+class DataCubeListAlgorithm(BaseAlgorithm):
     """This is TODO
 
-    All Processing algorithms should extend the GeoAlgorithm class.
+    All Processing algorithms should extend the BaseAlgorithm class.
     """
     PARAM_PRODUCT = 'Product type'
     OUTPUT_HTML = 'Output report'
     ALL = 'All'
 
     def __init__(self):
-        GeoAlgorithm.__init__(self)
+        BaseAlgorithm.__init__(self)
 
         self._icon = get_icon('opendatacube.png')
         self.products = {}
         self.param_options = ["All"]
         self.config_file = None
 
-    def defineCharacteristics(self):
+
+    def group(self):
+        return self.tr('Data Cube Tools')
+
+    def groupId(self):
+        return 'datacubetools'
+
+    def displayName(self, *args, **kwargs):
+        return self.tr('Data Cube List Products')
+
+    def initAlgorithm(self, config=None):
+
         """Here we define the inputs and output of the algorithm, along
         with some other properties.
         """
 
-        # The name that the user will see in the toolbox
-        self.name = 'Data Cube List Products'
-
-        self.addParameter(ParameterSelection(
+        self.addParameter(ParameterEnum(
             self.PARAM_PRODUCT,
             self.tr(self.PARAM_PRODUCT),
-            options=["All"], default="All"
+            options=["All"], defaultValue="All"
         ))
 
         self.addOutput(OutputHTML(self.OUTPUT_HTML, self.tr(self.OUTPUT_HTML)))
-
-        # The branch of the toolbox under which the algorithm will appear
-        self.group = 'Data Cube Helpers'  # TODO can there be a top level alg, not under a folder?
 
     def checkBeforeOpeningParametersDialog(self):
         config_file = ProcessingConfig.getSetting('datacube_config_file')

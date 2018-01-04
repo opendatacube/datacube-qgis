@@ -13,18 +13,19 @@ import json
 
 import pandas as pd
 
-from qgis.core import QgsRasterLayer, QgsMapLayerRegistry
-
-from processing.core.GeoAlgorithm import GeoAlgorithm
-from processing.core.parameters import (ParameterBoolean, ParameterCrs,
-                                        ParameterExtent, ParameterSelection,
-                                        ParameterString)
+from processing.core.parameters import (QgsProcessingParameterBoolean as ParameterBoolean,
+                                        QgsProcessingParameterCrs as ParameterCrs,
+                                        QgsProcessingParameterExtent as ParameterExtent,
+                                        QgsProcessingParameterEnum as ParameterEnum,
+                                        QgsProcessingParameterString as ParameterString)
 
 # from processing.core.parameters import ParameterString # TODO in QGIS 3
 from processing.core.ProcessingConfig import ProcessingConfig
-from processing.core.outputs import OutputDirectory
+from processing.core.outputs import QgsProcessingOutputFolder as OutputFolder
 
 from datacube.storage.storage import write_dataset_to_netcdf as write_netcdf
+
+from .base import BaseAlgorithm
 
 from ..qgisutils import get_icon, log_message
 
@@ -41,21 +42,19 @@ from ..utils import (
 )
 
 
-
 # from ..parameters import ParameterDateRange # TODO in QGIS 3
 
 
-class DataCubeQueryAlgorithm(GeoAlgorithm):
+class DataCubeQueryAlgorithm(BaseAlgorithm):
     """This is TODO
 
-    All Processing algorithms should extend the GeoAlgorithm class.
     """
 
     # Constants used to refer to parameters and outputs. They will be
     # used when calling the algorithm from another algorithm, or when
     # calling from the QGIS console.
 
-    OUTPUT_DIRECTORY = 'Output Directory'
+    OUTPUT_FOLDER = 'Output Directory'
 
     # TODO PARAM_PRODUCT is for proof of concept only
     PARAM_PRODUCT = 'Product'
@@ -84,7 +83,7 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
     # TODO error handling with GeoAlgorithmExecutionException
 
     def __init__(self):
-        GeoAlgorithm.__init__(self)
+        BaseAlgorithm.__init__(self)
 
         self._icon = get_icon('opendatacube.png')
         self.products = {}
@@ -92,38 +91,39 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
         self.measurements = defaultdict(list)
         self.config_file = None
 
-    def defineCharacteristics(self):
+    def checkParameterValuesBeforeExecuting(self, *args, **kwargs):
+        self.update_products_measurements()
+        # TODO make PARAM_FORMAT==True and PARAM_OVERVIEWS==True mutually exclusive?
+
+    def checkBeforeOpeningParametersDialog(self):
+        self.update_products_measurements()
+
+    def initAlgorithm(self, config=None):
         """Here we define the inputs and output of the algorithm, along
         with some other properties.
         """
 
-        # The name that the user will see in the toolbox
-        self.name = 'Data Cube Query'
-
-        # The branch of the toolbox under which the algorithm will appear
-        self.group = 'Data Cube Query'  # TODO can there be a top level alg, not under a folder?
-
         # Basic Params
-        self.addParameter(ParameterSelection(self.PARAM_PRODUCT,
-                                             self.tr(self.PARAM_PRODUCT)))
+        self.addParameter(ParameterEnum(self.PARAM_PRODUCT,
+                                        self.tr(self.PARAM_PRODUCT)))
         self.addParameter(ParameterString(self.PARAM_MEASUREMENTS,
                                           self.tr(self.PARAM_MEASUREMENTS),
-                                          optional=True, multiline=True))
+                                          optional=True, multiLine=True))
         # TODO QGIS 3
         # self.addParameter(ParameterDateRange(self.PARAM_DATE_RANGE, self.tr(self.PARAM_DATE_RANGE)))
         qgis2_date_default = '{ymd},{ymd}'.format(ymd=date.today().strftime('%Y-%m-%d'))
         self.addParameter(ParameterString(self.PARAM_DATE_RANGE,
                                           self.tr(self.PARAM_DATE_RANGE),
-                                          default=qgis2_date_default))
+                                          defaultValue=qgis2_date_default))
         # / TODO
         self.addParameter(ParameterExtent(self.PARAM_EXTENT,
                                           self.tr(self.PARAM_EXTENT)))
         self.addParameter(ParameterCrs(self.PARAM_EXTENT_CRS,  # TODO Can this be updated from the canvas/selected layer
-                                       self.tr(self.PARAM_EXTENT_CRS), default='EPSG:4326'))
+                                       self.tr(self.PARAM_EXTENT_CRS), defaultValue='EPSG:4326'))
 
         # "Advanced" Params (just to reduce interface clutter)
         param = ParameterBoolean(self.PARAM_FORMAT,
-                                 self.tr(self.PARAM_FORMAT), default=False)
+                                 self.tr(self.PARAM_FORMAT), defaultValue=False)
         param.isAdvanced = True
         self.addParameter(param)
 
@@ -132,14 +132,23 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
         self.addParameter(param)
 
         # param = ParameterRange(self.PARAM_OUTPUT_RESOLUTION, self.tr(self.PARAM_OUTPUT_RESOLUTION),
-        #                        optional=True, default='0,0')
+        #                        optional=True, defaultValue='0,0')
         param = ParameterString(self.PARAM_OUTPUT_RESOLUTION, self.tr(self.PARAM_OUTPUT_RESOLUTION),
-                               optional=True, default=None)
+                               optional=True, defaultValue=None)
         param.isAdvanced = True
         self.addParameter(param)
 
         # Output/s
-        self.addOutput(OutputDirectory(self.OUTPUT_DIRECTORY, self.tr(self.OUTPUT_DIRECTORY)))
+        self.addOutput(OutputFolder(self.OUTPUT_FOLDER, self.tr(self.OUTPUT_FOLDER)))
+
+    def group(self):
+        return self.tr('Data Cube Query')
+
+    def groupId(self):
+        return 'datacubequery'
+
+    def displayName(self, *args, **kwargs):
+        return self.tr('Data Cube Query')
 
     def processAlgorithm(self, progress):
         """Here is where the processing itself takes place."""
@@ -173,7 +182,7 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
         if output_res is not None and len(output_res) != 2:
             output_res = [output_res[0], output_res[0]]
 
-        output_directory = self.getOutputValue(self.OUTPUT_DIRECTORY)
+        OUTPUT_FOLDER = self.getOutputValue(self.OUTPUT_FOLDER)
 
         date_range = [s.strip() for s in date_range.split(',')]
         xmin, xmax, ymin, ymax = [float(f) for f in extent.split(',')]
@@ -203,7 +212,7 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
             raise RuntimeError('No data found')
 
         basename = '{}_{}'.format(product, '{}')
-        basepath = os.path.join(output_directory, basename)
+        basepath = os.path.join(OUTPUT_FOLDER, basename)
 
         if output_netcdf:
             ext = '.nc'
@@ -236,18 +245,11 @@ class DataCubeQueryAlgorithm(GeoAlgorithm):
                 if stats:
                     calc_stats(gtiff_ovr_options, stats_options)
 
-                if add_results:
-                    raster_lyr = QgsRasterLayer(raster_path, basename.format(ds))
-                    QgsMapLayerRegistry.instance().addMapLayer(raster_lyr)
+                #if add_results:
+                #    raster_lyr = QgsRasterLayer(raster_path, basename.format(ds))
+                #    QgsMapLayerRegistry.instance().addMapLayer(raster_lyr)
 
-                    # TODO return rasters
-
-    def checkParameterValuesBeforeExecuting(self, *args, **kwargs):
-        self.update_products_measurements()
-        # TODO make PARAM_FORMAT==True and PARAM_OVERVIEWS==True mutually exclusive?
-
-    def checkBeforeOpeningParametersDialog(self):
-        self.update_products_measurements()
+                # TODO return rasters
 
     def update_products_measurements(self):
         config_file = ProcessingConfig.getSetting('datacube_config_file')

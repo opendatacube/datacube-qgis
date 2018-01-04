@@ -24,8 +24,8 @@ __revision__ = '$Format:%H$'
 
 import json
 
-from processing.core.AlgorithmProvider import AlgorithmProvider
-from processing.core.ProcessingConfig import Setting, ProcessingConfig
+from qgis.core import QgsApplication, QgsProcessingProvider
+from processing.core.ProcessingConfig import ProcessingConfig, Setting
 
 from .algs.query import DataCubeQueryAlgorithm
 from .algs.list_products import DataCubeListAlgorithm
@@ -34,18 +34,29 @@ from .qgisutils import get_icon
 from .defaults import (GTIFF_OVR_DEFAULTS, GTIFF_DEFAULTS)
 
 
-class DataCubeQueryProvider(AlgorithmProvider):
+class DataCubeQueryProvider(QgsProcessingProvider):
 
+    ID = 'opendatacube'
     NAME = 'Open Data Cube'
     DESCRIPTION = 'Open Data Cube Algorithms'
 
     def __init__(self):
+
+        QgsProcessingProvider.__init__(self)
+
+        self._icon = get_icon('opendatacube.png')
+
         # TODO - add GDAL/rio format and overview creation options as settings
         self.settings = [
             Setting(DataCubeQueryProvider.DESCRIPTION,
+                    'Activate',
+                    self.tr('Activate provider'),
+                    default=True,
+                    valuetype=Setting.FILE),
+            Setting(DataCubeQueryProvider.DESCRIPTION,
                     'datacube_config_file',
                     self.tr("Open Data Cube database config file"),
-                    '',
+                    default='',
                     valuetype=Setting.FILE),
             Setting(DataCubeQueryProvider.DESCRIPTION,
                     'build_overviews',
@@ -64,66 +75,40 @@ class DataCubeQueryProvider(AlgorithmProvider):
                     valuetype=Setting.STRING),
         ]
 
-        AlgorithmProvider.__init__(self)
-
-        # Deactivate provider by default
-        self.activate = False
+        # Activate provider by default
+        self.activate = True
 
         # Load algorithms
-        self.alglist = [DataCubeQueryAlgorithm(),
-                        DataCubeListAlgorithm()]
-        for alg in self.alglist:
+        self.algs = [DataCubeQueryAlgorithm(),
+                     DataCubeListAlgorithm()]
+        for alg in self.algs:
             alg.provider = self
 
-    def initializeSettings(self):
-        """In this method we add settings needed to configure our
-        provider.
-
-        Do not forget to call the parent method, since it takes care
-        or automatically adding a setting for activating or
-        deactivating the algorithms in the provider.
-        """
-
-        AlgorithmProvider.initializeSettings(self)
+    def load(self):
+        ProcessingConfig.settingIcons[DataCubeQueryProvider.NAME] = self._icon
         for setting in self.settings:
             ProcessingConfig.addSetting(setting)
 
+        ProcessingConfig.readSettings()
+        self.refreshAlgorithms()
+        return True
+
     def unload(self):
-        """Setting should be removed here, so they do not appear anymore
-        when the plugin is unloaded.
-        """
-        AlgorithmProvider.unload(self)
         for setting in self.settings:
             ProcessingConfig.removeSetting(setting.name)
 
-    def getName(self):
-        """This is the name that will appear on the toolbox group.
-
-        It is also used to create the command line name of all the
-        algorithms from this provider.
-        """
+    def name(self):
         return DataCubeQueryProvider.NAME
 
     def getDescription(self):
-        """This is the provided full name.
-        """
         return DataCubeQueryProvider.DESCRIPTION
 
-    def getIcon(self):
+    def icon(self):
         return get_icon('opendatacube.png')
 
-    def _loadAlgorithms(self):
-        """Here we fill the list of algorithms in self.algs.
+    def id(self):
+        return DataCubeQueryProvider.ID
 
-        This method is called whenever the list of algorithms should
-        be updated. If the list of algorithms can change (for instance,
-        if it contains algorithms from user-defined scripts and a new
-        script might have been added), you should create the list again
-        here.
-
-        In this case, since the list is always the same, we assign from
-        the pre-made list. This assignment has to be done in this method
-        even if the list does not change, since the self.algs list is
-        cleared before calling this method.
-        """
-        self.algs = self.alglist
+    def loadAlgorithms(self):
+        for alg in self.algs:
+            self.addAlgorithm(alg)

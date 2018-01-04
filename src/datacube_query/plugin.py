@@ -46,7 +46,7 @@ import os
 import sys
 import inspect
 
-from processing.core.Processing import Processing
+from qgis.core import QgsApplication
 from .provider import DataCubeQueryProvider
 from .qgisutils import get_icon
 
@@ -62,10 +62,10 @@ class DataCubeQueryPlugin:
         self.provider = DataCubeQueryProvider()
 
     def initGui(self):  #pylint: disable=
-        Processing.addProvider(self.provider)
+        QgsApplication.processingRegistry().addProvider(self.provider)
 
     def unload(self):
-        Processing.removeProvider(self.provider)
+        QgsApplication.processingRegistry().removeProvider(self.provider)
 
     def getIcon(self):
         return get_icon('opendatacube.png')
