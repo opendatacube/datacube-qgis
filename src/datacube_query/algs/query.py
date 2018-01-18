@@ -98,6 +98,9 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
     def checkBeforeOpeningParametersDialog(self):
         self.update_products_measurements()
 
+    def createInstance(self):
+        return self.__class__()
+
     def initAlgorithm(self, config=None):
         """Here we define the inputs and output of the algorithm, along
         with some other properties.

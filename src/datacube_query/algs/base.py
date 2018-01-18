@@ -20,9 +20,6 @@ class BaseAlgorithm(QgsProcessingAlgorithm):
     def icon(self):
         return get_icon('opendatacube.png')
 
-    def createInstance(self, config=None):
-        return self.__class__(config)
-
     def name(self):
         return self.__class__.__name__
 

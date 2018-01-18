@@ -34,6 +34,8 @@ class DataCubeListAlgorithm(BaseAlgorithm):
         self.param_options = ["All"]
         self.config_file = None
 
+    def createInstance(self):
+        return self.__class__()
 
     def group(self):
         return self.tr('Data Cube Tools')
@@ -58,18 +60,18 @@ class DataCubeListAlgorithm(BaseAlgorithm):
 
         self.addOutput(OutputHTML(self.OUTPUT_HTML, self.tr(self.OUTPUT_HTML)))
 
-    def checkBeforeOpeningParametersDialog(self):
-        config_file = ProcessingConfig.getSetting('datacube_config_file')
-        self.config_file = config_file if config_file else None
-
-        # invert dict mapping
-        products = get_products(config=self.config_file)
-        self.products = {v['description']: k for k, v in products.items()}
-        product_desc = sorted(self.products.keys())
-        for param in self.parameters:
-            if isinstance(param, ParameterSelection) and param.name == self.PARAM_PRODUCT:
-                param.options = ['All']+product_desc
-                self.param_options = param.options
+    # def checkBeforeOpeningParametersDialog(self):
+    #     config_file = ProcessingConfig.getSetting('datacube_config_file')
+    #     self.config_file = config_file if config_file else None
+    #
+    #     # invert dict mapping
+    #     products = get_products(config=self.config_file)
+    #     self.products = {v['description']: k for k, v in products.items()}
+    #     product_desc = sorted(self.products.keys())
+    #     for param in self.parameters:
+    #         if isinstance(param, ParameterEnum) and param.name == self.PARAM_PRODUCT:
+    #             param.options = ['All']+product_desc
+    #             self.param_options = param.options
 
     def processAlgorithm(self, progress):
         """Here is where the processing itself takes place."""
