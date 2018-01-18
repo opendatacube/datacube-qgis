@@ -10,7 +10,7 @@
 
 # Mandatory items:
 name=Open Data Cube Query
-qgisMinimumVersion=2.14
+qgisMinimumVersion=3.0
 description=Query and view data stored in an Open Data Cube (https://www.opendatacube.org)
 version=0.1
 author=Geoscience Australia
