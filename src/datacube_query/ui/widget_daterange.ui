@@ -32,19 +32,19 @@
     <widget class="QgsDateTimeEdit" name="date_start">
      <property name="minimumDateTime">
       <datetime>
-       <hour>0</hour>
+       <hour>13</hour>
        <minute>0</minute>
        <second>0</second>
-       <year>1972</year>
-       <month>1</month>
-       <day>1</day>
+       <year>1971</year>
+       <month>12</month>
+       <day>31</day>
       </datetime>
      </property>
      <property name="minimumDate">
       <date>
-       <year>1972</year>
-       <month>1</month>
-       <day>1</day>
+       <year>1971</year>
+       <month>12</month>
+       <day>31</day>
       </date>
      </property>
      <property name="currentSection">
@@ -52,6 +52,9 @@
      </property>
      <property name="displayFormat">
       <string>yyyy-MM-dd</string>
+     </property>
+     <property name="timeSpec">
+      <enum>Qt::UTC</enum>
      </property>
     </widget>
    </item>

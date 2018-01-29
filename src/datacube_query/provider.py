@@ -28,7 +28,8 @@ from qgis.core import QgsApplication, QgsProcessingProvider
 from processing.core.ProcessingConfig import ProcessingConfig, Setting
 
 from .algs.query import DataCubeQueryAlgorithm
-from .algs.list_products import DataCubeListAlgorithm
+from .algs.test_query import TestDataCubeQueryAlgorithm
+#from .algs.list_products import DataCubeListAlgorithm
 
 from .qgisutils import get_icon
 from .defaults import (GTIFF_OVR_DEFAULTS, GTIFF_DEFAULTS)
@@ -79,8 +80,8 @@ class DataCubeQueryProvider(QgsProcessingProvider):
         self.activate = True
 
         # Load algorithms
-        self.algs = [DataCubeQueryAlgorithm(),
-                     DataCubeListAlgorithm()]
+        self.algs = [DataCubeQueryAlgorithm,
+                     TestDataCubeQueryAlgorithm]
         for alg in self.algs:
             alg.provider = self
 
@@ -111,4 +112,4 @@ class DataCubeQueryProvider(QgsProcessingProvider):
 
     def loadAlgorithms(self):
         for alg in self.algs:
-            self.addAlgorithm(alg)
+            self.addAlgorithm(alg())

@@ -1,4 +1,5 @@
 import os
+import json
 
 from processing.gui.wrappers import WidgetWrapper
 from qgis.PyQt import uic
@@ -34,37 +35,63 @@ class WidgetDateRange(BASE_DATE_RANGE, WIDGET_DATE_RANGE):
         self._end = qdatetime.toString(self._dateformat)
 
     def value(self):
-        return '|'.join([self._start, self._end])
+        return json.dumps([self._start, self._end])
 
 
 class WrapperDateRange(WidgetWrapper):
 
-    def _panel(self, *args, **kwargs):
-        return WidgetDateRange(*args, **kwargs)
-
     def createWidget(self, *args, **kwargs):
-        return self._panel(*args, **kwargs)
+        return WidgetDateRange(*args, **kwargs)
 
     def value(self):
         return self.widget.value()
 
 
-
 class WidgetProducts(BASE_PRODUCTS, WIDGET_PRODUCTS):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, data=None, *args, **kwargs):
         super().__init__()
         self.setupUi(self)
 
+        self._data = None
+        self._product = ''
+        self._measurements = []
+
+        self.set_data(data)
+
+        self.cbx_products.currentTextChanged.connect(self.update_measurements)
+
     def value(self):
-        return "PRODUCT", "MEASUREMENTS"
+        return json.dumps([self._product, self._measurements])
+
+    def set_data(self, data):
+        self.cbx_products.clear()
+        self.cbx_measurements.clear()
+
+        self._data = data if data else {}
+
+        for product in self._data:
+            self.cbx_product.addItem(product)
+
+        self.update_measurements()
+
+    def update_measurements(self):
+        self.cbx_measurements.clear()
+        self._product = self.cbx_products.currentText()
+
+        measurements = self._data.get(self._product, [])
+        for measurement in measurements:
+            self.cbx_measurements.addItem(measurement)
+
 
 
 class WrapperProducts(WidgetWrapper):
 
-    def _panel(self, *args, **kwargs):
-        print(self.__class__)
+    def createWidget(self, *args, **kwargs):
         return WidgetProducts(*args, **kwargs)
 
-    def createWidget(self, *args, **kwargs):
-        return self._panel(*args, **kwargs)
+    def value(self):
+        return self.widget.value()
+
+    def set_data(self, data):
+        self.widget.set_data(data)

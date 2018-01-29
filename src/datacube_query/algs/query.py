@@ -27,8 +27,8 @@ from datacube.storage.storage import write_dataset_to_netcdf as write_netcdf
 
 from .base import BaseAlgorithm
 
-from ..qgisutils import get_icon, log_message
-
+from ..parameters import ParameterDateRange
+from ..qgisutils import (get_icon, log_message)
 from ..utils import (
     build_overviews,
     calc_stats,
@@ -112,13 +112,9 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         self.addParameter(ParameterString(self.PARAM_MEASUREMENTS,
                                           self.tr(self.PARAM_MEASUREMENTS),
                                           optional=True, multiLine=True))
-        # TODO QGIS 3
-        # self.addParameter(ParameterDateRange(self.PARAM_DATE_RANGE, self.tr(self.PARAM_DATE_RANGE)))
-        qgis2_date_default = '{ymd},{ymd}'.format(ymd=date.today().strftime('%Y-%m-%d'))
-        self.addParameter(ParameterString(self.PARAM_DATE_RANGE,
-                                          self.tr(self.PARAM_DATE_RANGE),
-                                          defaultValue=qgis2_date_default))
-        # / TODO
+        self.addParameter(ParameterDateRange(self.PARAM_DATE_RANGE,
+                                             self.tr(self.PARAM_DATE_RANGE),
+                                             optional=True))
         self.addParameter(ParameterExtent(self.PARAM_EXTENT,
                                           self.tr(self.PARAM_EXTENT)))
         self.addParameter(ParameterCrs(self.PARAM_EXTENT_CRS,  # TODO Can this be updated from the canvas/selected layer
@@ -276,3 +272,4 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
         param = self.getParameterFromName(self.PARAM_PRODUCT)
         param.options = self.product_opts = sorted(self.products.keys())
+        print(sorted(self.products.keys()))
