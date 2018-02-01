@@ -20,15 +20,14 @@ class ParameterDateRange(QgsProcessingParameterString):
         return 'date_range'
 
 
-class ParameterProduct(QgsProcessingParameterString):
-    """ Product and measurements parameter that returns a json encoded list of
-        product string and measurements list of strings:
-            [product, ['list', 'of', 'measurements']]
+class ParameterProducts(QgsProcessingParameterString):
+    """ Products and measurements parameter that returns a json encoded dict of
+        product strings and measurements list of strings:
+            {'product': ['list', 'of', 'measurements']}
 
         e.g.
-            ['ls8_nbar_albers', ['red', 'green', 'blue']]
-            ['ls8_fc_albers', []]
-
+            {'ls8_nbar_albers', ['red', 'green', 'blue'],
+             'ls8_fc_albers', ['nir']}
 
     """
 
@@ -37,18 +36,9 @@ class ParameterProduct(QgsProcessingParameterString):
         QgsProcessingParameterString.__init__(self, name, description, *args, ** kwargs)
         self.setMetadata(wrapper)
 
-        self._products = []
-        self._measurements = {}
-
-    # noinspection PyMethodMayBeStatic
-    # pylint: disable=no-self-use
     def type(self):
         return 'product_measurements'
 
-    def set_values(self, products, measurements):
-
+    def set_data(self, data):
         for wrapper in list(self.wrappers.values()):
-            w = wrapper.widget
-            #self.connectWidgetChangedSignals(w)
-            for c in w.findChildren(QWidget):
-                print(c.value)
+            wrapper.setValue(data)

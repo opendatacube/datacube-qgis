@@ -79,7 +79,7 @@ class WidgetProducts(BASE_PRODUCT, WIDGET_PRODUCT):
 
         twit = QTreeWidgetItemIterator(item, flags)
 
-        while twit.value() is not None:
+        while twit.value() is not None: #This 'orrible iteration style offends me greatly
             yield twit.value()
             twit += 1
 
