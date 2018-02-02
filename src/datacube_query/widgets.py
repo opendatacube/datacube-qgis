@@ -5,7 +5,7 @@ import json
 from processing.gui.wrappers import WidgetWrapper
 
 from qgis.PyQt import uic
-from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtCore import Qt, QDate
 from qgis.PyQt.QtWidgets import QTreeWidgetItem, QTreeWidgetItemIterator
 
 _ui_path = os.path.join(os.path.dirname(__file__), 'ui')
@@ -15,6 +15,26 @@ WIDGET_DATE_RANGE, BASE_DATE_RANGE = uic.loadUiType(
 
 WIDGET_PRODUCT, BASE_PRODUCT = uic.loadUiType(
     os.path.join(_ui_path, 'widget_product.ui'))
+
+class WrapperBase(WidgetWrapper):
+
+    def setValue(self, data):
+        self.widget.set_data(data)
+
+    def value(self):
+        return self.widget.value()
+
+
+class WrapperDateRange(WrapperBase):
+
+    def createWidget(self, *args, **kwargs):
+        return WidgetDateRange(*args, **kwargs)
+
+
+class WrapperProducts(WrapperBase):
+
+    def createWidget(self, *args, **kwargs):
+        return WidgetProducts(*args, **kwargs)
 
 
 class WidgetDateRange(BASE_DATE_RANGE, WIDGET_DATE_RANGE):
@@ -31,6 +51,13 @@ class WidgetDateRange(BASE_DATE_RANGE, WIDGET_DATE_RANGE):
         self.date_start.valueChanged.connect(self.update_start)
         self.date_end.valueChanged.connect(self.update_end)
 
+    def set_data(self, data):
+        data = data if data else {}
+        data = json.loads(data) if isinstance(data, str) else data
+
+        self.date_start.date = QDate.fromString(data[0], self._dateformat)
+        self.date_end.date = QDate.fromString(data[1], self._dateformat)
+
     def update_start(self, qdatetime):
         self._start = qdatetime.toString(self._dateformat)
 
@@ -39,15 +66,6 @@ class WidgetDateRange(BASE_DATE_RANGE, WIDGET_DATE_RANGE):
 
     def value(self):
         return json.dumps([self._start, self._end])
-
-
-class WrapperDateRange(WidgetWrapper):
-
-    def createWidget(self, *args, **kwargs):
-        return WidgetDateRange(*args, **kwargs)
-
-    def value(self):
-        return self.widget.value()
 
 
 class WidgetProducts(BASE_PRODUCT, WIDGET_PRODUCT):
@@ -83,9 +101,14 @@ class WidgetProducts(BASE_PRODUCT, WIDGET_PRODUCT):
             yield twit.value()
             twit += 1
 
+    def set_selected(self, selected=None): #TODO make sure running alg from history loads all products and selects orig
+        pass
+
     def set_data(self, data=None):
         self.tree_products.clear()
-        self._data = data if data else {}
+
+        data = data if data else {}
+        self._data = json.loads(data) if isinstance(data, str) else data
 
         for product, measurements in self._data.items():
             parent = QTreeWidgetItem(self.tree_products)
@@ -115,17 +138,6 @@ class WidgetProducts(BASE_PRODUCT, WIDGET_PRODUCT):
     def value(self):
         return json.dumps(self.get_data())
 
-
-class WrapperProducts(WidgetWrapper):
-
-    def createWidget(self, *args, **kwargs):
-        return WidgetProducts(*args, **kwargs)
-
-    def setValue(self, data):
-        self.widget.set_data(data)
-
-    def value(self):
-        return self.widget.value()
 
 # # Stub for alternative TreeView widget using Model-View-Controller (MVC) design pattern
 # WIDGET_PRODUCTS, BASE_PRODUCTS = uic.loadUiType(

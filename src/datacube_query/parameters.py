@@ -19,6 +19,9 @@ class ParameterDateRange(QgsProcessingParameterString):
     def type(self):
         return 'date_range'
 
+    def set_data(self, data):
+        for wrapper in list(self.wrappers.values()):
+            wrapper.setValue(data)
 
 class ParameterProducts(QgsProcessingParameterString):
     """ Products and measurements parameter that returns a json encoded dict of
