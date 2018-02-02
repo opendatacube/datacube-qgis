@@ -1,4 +1,5 @@
 import os
+from collections import defaultdict
 from datetime import date
 
 import dask.array
@@ -59,21 +60,45 @@ def get_products(config=None):
     return products.to_dict('index')
 
 
-def get_products_and_measurements(product=None, config=None):
+# def get_products_and_measurements(product=None, config=None):
+#     dc = datacube.Datacube(config=config)
+#     products = dc.list_products()
+#     measurements = dc.list_measurements()
+#     products = products.rename(columns={'name': 'product'})
+#     measurements.reset_index(inplace=True)
+#     display_columns = ['product_type', 'product', 'description']
+#     products = products[display_columns]
+#     display_columns = ['measurement', 'aliases', 'dtype', 'units', 'product']
+#     measurements = measurements[display_columns]
+#     prodmeas = pd.merge(products, measurements, how='left', on=['product'])
+#     if product is not None:
+#         prodmeas = prodmeas[prodmeas['product'] == product]
+#     prodmeas.set_index(['product_type', 'product', 'description'], inplace=True)  # , drop=False)
+#     return prodmeas
+
+def get_products_and_measurements(config=None, details=True):
+    """ Return dict of product strings and measurements list of strings:
+            {'product': ['list', 'of', 'measurements']}
+
+        e.g.
+            {'ls8_nbar_albers', ['red', 'green', 'blue'],
+             'ls8_fc_albers', ['nir']}
+
+    """
+
     dc = datacube.Datacube(config=config)
-    products = dc.list_products()
-    measurements = dc.list_measurements()
-    products = products.rename(columns={'name': 'product'})
-    measurements.reset_index(inplace=True)
-    display_columns = ['product_type', 'product', 'description']
-    products = products[display_columns]
-    display_columns = ['measurement', 'aliases', 'dtype', 'units', 'product']
-    measurements = measurements[display_columns]
-    prodmeas = pd.merge(products, measurements, how='left', on=['product'])
-    if product is not None:
-        prodmeas = prodmeas[prodmeas['product'] == product]
-    prodmeas.set_index(['product_type', 'product', 'description'], inplace=True)  # , drop=False)
-    return prodmeas
+    measurements = dc.list_measurements(with_pandas=False)
+
+    prod_meas = defaultdict(list)
+
+    for measurement in measurements:
+        product = measurement.pop('product')
+        if details:
+            prod_meas[product].append(measurement)
+        else:
+            prod_meas[product].append(measurement['measurement'])
+
+    return prod_meas
 
 
 def lcase_dict(adict):
