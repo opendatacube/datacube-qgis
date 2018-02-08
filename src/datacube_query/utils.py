@@ -60,46 +60,72 @@ def get_products(config=None):
     return products.to_dict('index')
 
 
-# def get_products_and_measurements(product=None, config=None):
-#     dc = datacube.Datacube(config=config)
-#     products = dc.list_products()
-#     measurements = dc.list_measurements()
-#     products = products.rename(columns={'name': 'product'})
-#     measurements.reset_index(inplace=True)
-#     display_columns = ['product_type', 'product', 'description']
-#     products = products[display_columns]
-#     display_columns = ['measurement', 'aliases', 'dtype', 'units', 'product']
-#     measurements = measurements[display_columns]
-#     prodmeas = pd.merge(products, measurements, how='left', on=['product'])
-#     if product is not None:
-#         prodmeas = prodmeas[prodmeas['product'] == product]
-#     prodmeas.set_index(['product_type', 'product', 'description'], inplace=True)  # , drop=False)
-#     return prodmeas
-
-def get_products_and_measurements(config=None, details=True):
-    """ Return dict of product strings and measurements list of strings:
-            {'product': ['list', 'of', 'measurements']}
+def get_products_and_measurements(config=None):
+    """ Return dict of products and measurements :
+            {product_description: 'product': product_name,
+                                  'measurements': {measurement_description, measurement_name]}
 
         e.g.
-            {'ls8_nbar_albers', ['red', 'green', 'blue'],
-             'ls8_fc_albers', ['nir']}
-
+            {'Landsat 8 NBART 25 metre':
+                'product': 'ls8_nbart_scene',
+                'measurements': {
+                    '1/band_1/coastal_aerosol': '1',
+                    '2/band_2/blue': '2',
+                    '3/band_3/green': '3',
+                    '4/band_4/red': '4',
+                    '5/band_5/nir': '5',
+                    '6/band_6/swir1': '6',
+                    '7/band_7/swir2': '7'}
+            }
     """
 
+    proddict = defaultdict(lambda : defaultdict(dict))
+
     dc = datacube.Datacube(config=config)
-    measurements = dc.list_measurements(with_pandas=False)
+    products = dc.list_products()
+    measurements = dc.list_measurements()
+    measurements.reset_index(inplace=True)
+    display_columns = ['name', 'description']
+    products = products[display_columns]
+    display_columns = ['measurement', 'aliases', 'product']
+    measurements = measurements[display_columns]
 
-    prod_meas = defaultdict(list)
+    products.set_index(['name'], inplace=True, drop=False)
+    measurements.set_index(['product'], inplace=True, drop=False)
 
-    for measurement in measurements:
-        product = measurement.pop('product')
-        if details:
-            prod_meas[product].append(measurement)
-        else:
-            prod_meas[product].append(measurement['measurement'])
+    prodmeas = measurements.join(products, how='left')
+    prodmeas['meas_desc'] = prodmeas[['measurement', 'aliases']].apply(lambda x: measurement_desc(*x), axis=1)
 
-    return prod_meas
+    for row in prodmeas.itertuples():
+        proddict[row.description]['product'] = row.product
+        proddict[row.description]['measurements'][row.meas_desc] = row.measurement
 
+    return proddict
+
+
+# def get_products_and_measurements(config=None, details=True):
+#     """ Return dict of product strings and measurements list of strings:
+#             {'product': ['list', 'of', 'measurements']}
+#
+#         e.g.
+#             {'ls8_nbar_albers', ['red', 'green', 'blue'],
+#              'ls8_fc_albers', ['nir']}
+#
+#     """
+#
+#     dc = datacube.Datacube(config=config)
+#     measurements = dc.list_measurements(with_pandas=False)
+#
+#     prod_meas = defaultdict(list)
+#
+#     for measurement in measurements:
+#         product = measurement.pop('product')
+#         if details:
+#             prod_meas[product].append(measurement)
+#         else:
+#             prod_meas[product].append(measurement['measurement'])
+#
+#     return prod_meas
 
 def lcase_dict(adict):
     ret_dict = {}
@@ -110,6 +136,20 @@ def lcase_dict(adict):
             ret_dict[k] = v
 
     return ret_dict
+
+def measurement_desc(measurement, aliases):
+    try:
+        if pd.isnull(aliases):
+            return measurement
+    except ValueError: #Got a list
+        pass
+
+    if measurement in aliases: #Assumes a list...
+        # return '/'.join(aliases)
+        del aliases[aliases.index(measurement)]
+
+    #return '/'.join([measurement]+aliases) #Assumes a list...
+    return '{} ({})'.format(measurement, '/'.join(aliases))
 
 
 def run_query(product, measurements, date_range, extent, query_crs,
