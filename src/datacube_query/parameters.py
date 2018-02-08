@@ -13,7 +13,7 @@ class ParameterDateRange(QgsProcessingParameterString):
     # TODO - validate start <= end
     def __init__(self, name, description, *args, **kwargs):
         wrapper = {'widget_wrapper': 'datacube_query.widgets.WrapperDateRange'}
-        QgsProcessingParameterString.__init__(self, name, description, *args, **kwargs)
+        super().__init__(name, description, *args, **kwargs)
         self.setMetadata(wrapper)
 
     def type(self):
@@ -34,9 +34,12 @@ class ParameterProducts(QgsProcessingParameterString):
 
     """
 
-    def __init__(self, name, description, *args, **kwargs):
-        wrapper = {'widget_wrapper': 'datacube_query.widgets.WrapperProducts'}
-        QgsProcessingParameterString.__init__(self, name, description, *args, ** kwargs)
+    def __init__(self, name, description, items, *args, **kwargs):
+        wrapper = {'widget_wrapper': {
+                      'class': 'datacube_query.widgets.WrapperProducts',
+                      'items':items}
+                  }
+        super().__init__(name, description, *args, ** kwargs)
         self.setMetadata(wrapper)
 
     def type(self):
@@ -45,3 +48,4 @@ class ParameterProducts(QgsProcessingParameterString):
     def set_data(self, data):
         for wrapper in list(self.wrappers.values()):
             wrapper.setValue(data)
+

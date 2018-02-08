@@ -19,7 +19,7 @@ WIDGET_PRODUCT, BASE_PRODUCT = uic.loadUiType(
 class WrapperBase(WidgetWrapper):
 
     def setValue(self, data):
-        self.widget.set_data(data)
+        self.widget.set_value(data)
 
     def value(self):
         return self.widget.value()
@@ -33,8 +33,8 @@ class WrapperDateRange(WrapperBase):
 
 class WrapperProducts(WrapperBase):
 
-    def createWidget(self, *args, **kwargs):
-        return WidgetProducts(*args, **kwargs)
+    def createWidget(self, items=None, *args, **kwargs):
+        return WidgetProducts(items, *args, **kwargs)
 
 
 class WidgetDateRange(BASE_DATE_RANGE, WIDGET_DATE_RANGE):
@@ -51,12 +51,15 @@ class WidgetDateRange(BASE_DATE_RANGE, WIDGET_DATE_RANGE):
         self.date_start.valueChanged.connect(self.update_start)
         self.date_end.valueChanged.connect(self.update_end)
 
-    def set_data(self, data):
+    def set_value(self, data):
         data = data if data else {}
         data = json.loads(data) if isinstance(data, str) else data
 
-        self.date_start.date = QDate.fromString(data[0], self._dateformat)
-        self.date_end.date = QDate.fromString(data[1], self._dateformat)
+        self.date_start.setDate(QDate.fromString(data[0], self._dateformat))
+        self.date_end.setDate(QDate.fromString(data[1], self._dateformat))
+
+        self._start = data[0]
+        self._end = data[1]
 
     def update_start(self, qdatetime):
         self._start = qdatetime.toString(self._dateformat)
@@ -70,17 +73,17 @@ class WidgetDateRange(BASE_DATE_RANGE, WIDGET_DATE_RANGE):
 
 class WidgetProducts(BASE_PRODUCT, WIDGET_PRODUCT):
 
-    def __init__(self, data=None, *args, **kwargs):
+    def __init__(self, items=None, *args, **kwargs):
         super().__init__()
         self.setupUi(self)
 
         self._data = None
-        self.set_data(data)
+        self.set_items(items)
 
         # In case we need to implement single product selections only
-        # self.tree_products.itemClicked.connect(self.check_item)
+        # self.tree_products.itemClicked.connect(self.there_can_be_only_one)
 
-    def check_item(self, item, column=0):
+    def there_can_be_only_one(self, item, column=0):
 
         """ Stub for implementing single product selections only"""
         # Get items, check item != clicked item, uncheck non-clicked parents
@@ -89,22 +92,31 @@ class WidgetProducts(BASE_PRODUCT, WIDGET_PRODUCT):
     def get_checked(self):
         return self.get_items(flags=QTreeWidgetItemIterator.Checked)
 
-    def get_items(self, item=None, flags=QTreeWidgetItemIterator.All):
+    def get_items(self, flags=QTreeWidgetItemIterator.All):
         """ Returns an iterator over the tree items. """
 
-        if item is None:
-            item = self.tree_products
-
-        twit = QTreeWidgetItemIterator(item, flags)
+        twit = QTreeWidgetItemIterator(self.tree_products, flags)
 
         while twit.value() is not None: #This 'orrible iteration style offends me greatly
             yield twit.value()
             twit += 1
 
-    def set_selected(self, selected=None): #TODO make sure running alg from history loads all products and selects orig
-        pass
+    def get_value(self):
+        """ Return checked """
+        data = defaultdict(list)
 
-    def set_data(self, data=None):
+        for item in self.get_checked():
+            value = item.text(0)
+            parent = item.parent()
+            if parent is None:
+                _ = data[value]
+            else:
+                data[parent.text(0)].append(value)
+
+        return data
+
+    def set_items(self, data=None):
+        """" Build the tree afresh with no selections """
         self.tree_products.clear()
 
         data = data if data else {}
@@ -121,22 +133,28 @@ class WidgetProducts(BASE_PRODUCT, WIDGET_PRODUCT):
                 child.setText(0, measurement)
                 child.setCheckState(0, Qt.Unchecked)
 
-    def get_data(self):
-        """ Return checked """
-        data = defaultdict(list)
+    def set_value(self, data=None): #TODO make sure running alg from history loads all products and selects orig
+        """" Select items in the tree"""
+        data = data if data else {}
+        data = json.loads(data) if isinstance(data, str) else data
 
-        for item in self.get_checked():
+        for item in self.get_items():
             value = item.text(0)
             parent = item.parent()
             if parent is None:
-                _ =data[value]
+                if value in data:
+                    item.setCheckState(0, Qt.Checked)
+                else:
+                    item.setCheckState(0, Qt.Unchecked)
             else:
-                data[parent.text(0)].append(value)
-
-        return data
+                parent_value = parent.text(0)
+                if parent_value in data and value in data[parent_value]:
+                    item.setCheckState(0, Qt.Checked)
+                else:
+                    item.setCheckState(0, Qt.Unchecked)
 
     def value(self):
-        return json.dumps(self.get_data())
+        return json.dumps(self.get_value())
 
 
 # # Stub for alternative TreeView widget using Model-View-Controller (MVC) design pattern
