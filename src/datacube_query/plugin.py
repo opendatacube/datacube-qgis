@@ -22,43 +22,15 @@ __copyright__ = '(C) 2017 by Geoscience Australia'
 
 __revision__ = '$Format:%H$'
 
-try:
-    import qgis2compat.apicompat
-except ImportError:
-    pass # pass for now, catch later if qgis.core.Qgis raises an AttributeError
-
-import qgis.core
-
-try:
-    QGIS_VERSION = qgis.core.Qgis.QGIS_VERSION
-    QGIS_VERSION_INT = qgis.core.Qgis.QGIS_VERSION_INT
-    assert QGIS_VERSION_INT >= 21400
-except AttributeError:
-    message = ('The DataCubeQuery Plugin uses the QGIS2compat plugin. '
-               'Please install it with the plugin manager and '
-               'restart QGIS.')
-    raise ImportError(message)
-except AssertionError:
-    message = ('The DataCubeQuery Plugin requires QGIS >=2.14')
-    raise ImportError(message)
-
-import os
-import sys
-import inspect
-
 from qgis.core import QgsApplication
 from .provider import DataCubeQueryProvider
 from .qgisutils import get_icon
 
-cmd_folder = os.path.split(inspect.getfile(inspect.currentframe()))[0]
-
-if cmd_folder not in sys.path:
-    sys.path.insert(0, cmd_folder)
-
-
 class DataCubeQueryPlugin:
 
-    def __init__(self):
+    def __init__(self, iface):
+        self.iface = iface
+        # TODO figure out why a duplicate provider is registered
         self.provider = DataCubeQueryProvider()
 
     def initGui(self):  #pylint: disable=
@@ -69,3 +41,4 @@ class DataCubeQueryPlugin:
 
     def getIcon(self):
         return get_icon('opendatacube.png')
+

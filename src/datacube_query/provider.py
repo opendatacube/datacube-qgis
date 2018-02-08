@@ -28,8 +28,6 @@ from qgis.core import QgsApplication, QgsProcessingProvider
 from processing.core.ProcessingConfig import ProcessingConfig, Setting
 
 from .algs.query import DataCubeQueryAlgorithm
-from .algs.test_query import TestDataCubeQueryAlgorithm
-#from .algs.list_products import DataCubeListAlgorithm
 
 from .qgisutils import get_icon
 from .defaults import (GTIFF_OVR_DEFAULTS, GTIFF_DEFAULTS)
@@ -42,10 +40,13 @@ class DataCubeQueryProvider(QgsProcessingProvider):
     DESCRIPTION = 'Open Data Cube Algorithms'
 
     def __init__(self):
+        super().__init__()
+        self.algs = [DataCubeQueryAlgorithm]
 
-        QgsProcessingProvider.__init__(self)
+    def load(self):
 
-        self._icon = get_icon('opendatacube.png')
+        # Activate provider by default
+        self.activate = True
 
         # TODO - add GDAL/rio format and overview creation options as settings
         self.settings = [
@@ -53,7 +54,7 @@ class DataCubeQueryProvider(QgsProcessingProvider):
                     'Activate',
                     self.tr('Activate provider'),
                     default=True,
-                    valuetype=Setting.FILE),
+                    valuetype=None),
             Setting(DataCubeQueryProvider.DESCRIPTION,
                     'datacube_config_file',
                     self.tr("Open Data Cube database config file"),
@@ -76,22 +77,14 @@ class DataCubeQueryProvider(QgsProcessingProvider):
                     valuetype=Setting.STRING),
         ]
 
-        # Activate provider by default
-        self.activate = True
 
-        # Load algorithms
-        self.algs = [DataCubeQueryAlgorithm,
-                     TestDataCubeQueryAlgorithm]
-        for alg in self.algs:
-            alg.provider = self
-
-    def load(self):
-        ProcessingConfig.settingIcons[DataCubeQueryProvider.NAME] = self._icon
+        ProcessingConfig.settingIcons[DataCubeQueryProvider.NAME] = self.icon()
         for setting in self.settings:
             ProcessingConfig.addSetting(setting)
 
         ProcessingConfig.readSettings()
         self.refreshAlgorithms()
+
         return True
 
     def unload(self):
