@@ -15,7 +15,7 @@ from ..qgisutils import get_icon, log_message
 class BaseAlgorithm(QgsProcessingAlgorithm):
 
     def __init__(self):
-        QgsProcessingAlgorithm.__init__(self)
+        super().__init__()
 
     def icon(self):
         return get_icon('opendatacube.png')

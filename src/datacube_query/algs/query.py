@@ -12,6 +12,7 @@ from datetime import date
 import json
 
 import pandas as pd
+from sqlalchemy.exc import SQLAlchemyError
 
 from processing.core.parameters import (QgsProcessingParameterBoolean as ParameterBoolean,
                                         QgsProcessingParameterCrs as ParameterCrs,
@@ -28,7 +29,7 @@ from datacube.storage.storage import write_dataset_to_netcdf as write_netcdf
 
 from .base import BaseAlgorithm
 from ..parameters import ParameterDateRange, ParameterProducts
-from ..qgisutils import (get_icon, log_message)
+from ..qgisutils import (get_icon, log_message, LOGLEVEL)
 from ..utils import (
     build_overviews,
     calc_stats,
@@ -58,7 +59,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
     # instrument
     # /TODO
     PARAM_PRODUCTS = 'Product and measurements'
-    PARAM_DATE_RANGE = 'Date range (YYY-MM-DD, YYY-MM-DD)'
+    PARAM_DATE_RANGE = 'Date range (yyyy-mm-dd)'
     PARAM_EXTENT = 'Query extent'
 
     # Advanced params
@@ -73,7 +74,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
     # TODO error handling with GeoAlgorithmExecutionException
 
     def __init__(self, products=None):
-        BaseAlgorithm.__init__(self)
+        super().__init__()
 
         self._icon = get_icon('opendatacube.png')
         self.config_file = None
@@ -88,8 +89,27 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
     #     pass
     #
     def createInstance(self):
-        products = self.get_products()
+        try:products = self.get_products_and_measurements()
+        except SQLAlchemyError as e:
+            log_message('Unable to connect to a running Data Cube instance',
+                        LOGLEVEL.WARNING)
+            products = None
+
         return self.__class__(products)
+
+    def displayName(self, *args, **kwargs):
+        return self.tr('Data Cube Query')
+
+    def get_products_and_measurements(self):
+        config_file = ProcessingConfig.getSetting('datacube_config_file')
+        self.config_file = config_file or None
+        return get_products_and_measurements(config=self.config_file)
+
+    def group(self):
+        return self.tr('Data Cube Query')
+
+    def groupId(self):
+        return 'datacubequery'
 
     def initAlgorithm(self, config=None):
         """
@@ -97,9 +117,13 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         """
 
         # Basic Params
+        items = defaultdict(list)
+        for k, v in self.products.items():
+            items[k] += v['measurements'].keys()
+
         self.addParameter(ParameterProducts(self.PARAM_PRODUCTS,
                                             self.tr(self.PARAM_PRODUCTS),
-                                            defaultValue=self.products # TODO Fix running from history
+                                            items=items
                                            ))
 
         self.addParameter(ParameterDateRange(self.PARAM_DATE_RANGE,
@@ -124,21 +148,13 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         self.addParameter(param)
 
         # Output/s
-        self.addParameter(ParameterFolderDestination(self.OUTPUT_FOLDER,
-                                                     self.tr(self.OUTPUT_FOLDER)))
+        # self.addParameter(ParameterFolderDestination(self.OUTPUT_FOLDER,
+        #                                             self.tr(self.OUTPUT_FOLDER)))
         self.addOutput(OutputFolder(self.OUTPUT_FOLDER, self.tr(self.OUTPUT_FOLDER)))
-
-    def group(self):
-        return self.tr('Data Cube Query')
-
-    def groupId(self):
-        return 'datacubequery'
-
-    def displayName(self, *args, **kwargs):
-        return self.tr('Data Cube Query')
 
     def prepareAlgorithm(self, parameters, context, feedback):
         """TODO docstring"""
+        return True
 
     def processAlgorithm(self, parameters, context, feedback):
         """TODO docstring"""
@@ -151,8 +167,12 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         overviews = ProcessingConfig.getSetting('build_overviews')
 
         # Parameters
-        products = self.parameterAsString(parameters, self.PARAM_PRODUCTS, context)
-        products = json.loads(products)
+        product_descs = self.parameterAsString(parameters, self.PARAM_PRODUCTS, context)
+        product_descs = json.loads(product_descs)
+        products = defaultdict(list)
+        for k, v in product_descs.items():
+            for m in v:
+                products[self.products[k]['product']] += [self.products[k]['measurements'][m]]
 
         date_range = self.parameterAsString(parameters, self.PARAM_DATE_RANGE, context)
         date_range = json.loads(date_range)
@@ -179,6 +199,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
         stats = False # TODO from Settings
 
+        # TODO remove debug prints
         for product, measurements in products.items():
             print(product)
             print(measurements)
@@ -243,8 +264,3 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         #         # TODO return rasters
 
         return {self.OUTPUT_FOLDER: output_folder}
-
-    def get_products(self):
-        config_file = ProcessingConfig.getSetting('datacube_config_file')
-        self.config_file = config_file or None
-        return get_products_and_measurements(config=self.config_file, details=False)
