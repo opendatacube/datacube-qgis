@@ -7,7 +7,9 @@
 # from rasterio.enums import Resampling, Compression
 #
 # GTIFF_COMPRESSION = [c.value for c in Compression]
-# GTIFF_OVR_RESAMPLING = {r.name: r.value for r in Resampling}
+# GTIFF_OVR_RESAMPLING = {r.name: r for r in Resampling}
+
+SETTINGS_GROUP = 'Open Data Cube'
 
 GTIFF_COMPRESSION = [
     'JPEG',

@@ -9,13 +9,17 @@ __revision__ = '$Format:%H$'
 from qgis.core import QgsProcessingAlgorithm
 from qgis.PyQt.QtCore import QCoreApplication
 
-from ..qgisutils import get_icon, log_message
+from ..defaults import SETTINGS_GROUP
+from ..qgisutils import get_icon, log_message, get_settings
 
 
 class BaseAlgorithm(QgsProcessingAlgorithm):
 
     def __init__(self):
         super().__init__()
+
+    def get_settings(self):
+        return get_settings(SETTINGS_GROUP)
 
     def icon(self):
         return get_icon('opendatacube.png')

@@ -11,6 +11,8 @@ from collections import defaultdict
 from datetime import date
 import json
 
+from datacube.storage.storage import write_dataset_to_netcdf as write_netcdf
+
 import pandas as pd
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -22,10 +24,9 @@ from processing.core.parameters import (QgsProcessingParameterBoolean as Paramet
                                         QgsProcessingParameterNumber as ParameterNumber,
                                         QgsProcessingParameterFolderDestination as ParameterFolderDestination)
 
-from processing.core.ProcessingConfig import ProcessingConfig
 from processing.core.outputs import QgsProcessingOutputFolder as OutputFolder
 
-from datacube.storage.storage import write_dataset_to_netcdf as write_netcdf
+from qgis.core import QgsRasterLayer, QgsProject
 
 from .base import BaseAlgorithm
 from ..parameters import ParameterDateRange, ParameterProducts
@@ -47,9 +48,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
     """
 
-    # Constants used to refer to parameters and outputs. They will be
-    # used when calling the algorithm from another algorithm, or when
-    # calling from the QGIS console.
+    # TODO docstring
 
     OUTPUT_FOLDER = 'Output Directory'
 
@@ -66,10 +65,8 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
     PARAM_OVERVIEWS = 'Build overviews for output GeoTIFFs?'
     PARAM_FORMAT = 'Write NetCDF instead of GeoTIFF?'
     PARAM_OUTPUT_CRS = 'Output CRS (required for products with no CRS defined)'
-    PARAM_OUTPUT_RESOLUTION = ('Output resolution  (N or N,N, '
-                               'required for products with no resolution defined)')
-
-    # TODO PARAM_ADD_TO_MAP = 'Add query results to map' #Bool
+    PARAM_OUTPUT_RESOLUTION = ('Output pixel resolution '
+                               '(required for products with no resolution defined)')
 
     # TODO error handling with GeoAlgorithmExecutionException
 
@@ -101,9 +98,9 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         return self.tr('Data Cube Query')
 
     def get_products_and_measurements(self):
-        config_file = ProcessingConfig.getSetting('datacube_config_file')
-        self.config_file = config_file or None
-        return get_products_and_measurements(config=self.config_file)
+
+        config_file = self.get_settings()['datacube_config_file'] or None
+        return get_products_and_measurements(config=config_file)
 
     def group(self):
         return self.tr('Data Cube Query')
@@ -148,9 +145,9 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         self.addParameter(param)
 
         # Output/s
-        # self.addParameter(ParameterFolderDestination(self.OUTPUT_FOLDER,
-        #                                             self.tr(self.OUTPUT_FOLDER)))
-        self.addOutput(OutputFolder(self.OUTPUT_FOLDER, self.tr(self.OUTPUT_FOLDER)))
+        self.addParameter(ParameterFolderDestination(self.OUTPUT_FOLDER,
+                                                     self.tr(self.OUTPUT_FOLDER)))
+        #self.addOutput(OutputFolder(self.OUTPUT_FOLDER, self.tr(self.OUTPUT_FOLDER)))
 
     def prepareAlgorithm(self, parameters, context, feedback):
         """TODO docstring"""
@@ -160,11 +157,11 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         """TODO docstring"""
 
         # General options
-        config_file = ProcessingConfig.getSetting('datacube_config_file')
-        config_file = config_file if config_file else None
-        gtiff_options = json.loads(ProcessingConfig.getSetting('gtiff_options'))
-        gtiff_ovr_options = json.loads(ProcessingConfig.getSetting('gtiff_ovr_options'))
-        overviews = ProcessingConfig.getSetting('build_overviews')
+        settings = self.get_settings()
+        config_file = settings['datacube_config_file'] or None
+        gtiff_options = json.loads(settings['datacube_gtiff_options'])
+        gtiff_ovr_options = json.loads(settings['datacube_gtiff_ovr_options'])
+        overviews = settings['datacube_build_overviews']
 
         # Parameters
         product_descs = self.parameterAsString(parameters, self.PARAM_PRODUCTS, context)
@@ -199,68 +196,63 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
         stats = False # TODO from Settings
 
-        # TODO remove debug prints
-        for product, measurements in products.items():
-            print(product)
-            print(measurements)
-
         # TODO Progress (QProgressBar+iface.messageBar/iface.mainWindow().showMessage)
         # TODO Debug Logging
         # TODO Error handling
 
-        # TODO Check mem avail and check/estimate xarray size (inc. lazy via dask?)
-        # data = run_query(product,
-        #                  measurements,
-        #                  date_range,
-        #                  extent,
-        #                  extent_crs,
-        #                  output_crs,
-        #                  output_res,
-        #                  config_file,
-        #                  dask_chunks=dask_chunks
-        #                  )
-        #
-        # if data is None:
-        #     raise RuntimeError('No data found')
-        #
-        # basename = '{}_{}'.format(product, '{}')
-        # basepath = os.path.join(OUTPUT_FOLDER, basename)
-        #
-        # if output_netcdf:
-        #     ext = '.nc'
-        #     start_date = datetime_to_str(data.time[0])
-        #     end_date = datetime_to_str(data.time[-1])
-        #     dt = '{}_{}'.format(start_date, end_date)
-        #     raster_path = basepath.format(dt) + ext
-        #     write_netcdf(data, raster_path)
-        #
-        #     if add_results:
-        #         for measurement in measurements:
-        #             layer_name = '{}_{}_{}'.format(product, measurement, dt)
-        #             nc_path = 'NETCDF:"{}":{}'.format(raster_path, measurement)
-        #             raster_lyr = QgsRasterLayer(nc_path, layer_name)
-        #             QgsProject.instance().addMapLayer(raster_lyr)
-        # else:
-        #     ext = '.tif'
-        #     for i, dt in enumerate(data.time):
-        #         ds = datetime_to_str(dt)
-        #         raster_path = basepath.format(ds) + ext
-        #         # TODO add advanced param/s for overview stuff
-        #         write_geotiff(raster_path, data, time_index=i,
-        #                       profile_override=gtiff_options)
-        #
-        #         update_tags(raster_path, TIFFTAG_DATETIME=datetime_to_str(dt, '%Y:%m:%d %H:%M:%S'))
-        #
-        #         if overviews:
-        #             build_overviews(raster_path, gtiff_ovr_options)
-        #
-        #         if stats:
-        #             calc_stats(gtiff_ovr_options, stats_options)
-        #
-        #         if add_results:
-        #             raster_lyr = QgsRasterLayer(raster_path, basename.format(ds))
-        #             QgsProject.instance().addMapLayer(raster_lyr)
-        #
-        #         # TODO return rasters
+        for product, measurements in products.items():
+            data = run_query(product,
+                             measurements,
+                             date_range,
+                             extent,
+                             extent_crs,
+                             output_crs,
+                             output_res,
+                             config_file,
+                             dask_chunks=dask_chunks
+                             )
+
+            if data is None:
+                raise RuntimeError('No data found')
+
+            basename = '{}_{}'.format(product, '{}')
+            basepath = os.path.join(output_folder, basename)
+
+            if output_netcdf:
+                ext = '.nc'
+                start_date = datetime_to_str(data.time[0])
+                end_date = datetime_to_str(data.time[-1])
+                dt = '{}_{}'.format(start_date, end_date)
+                raster_path = basepath.format(dt) + ext
+                write_netcdf(data, raster_path)
+
+                if add_results:
+                    for measurement in measurements:
+                        layer_name = '{}_{}_{}'.format(product, measurement, dt)
+                        nc_path = 'NETCDF:"{}":{}'.format(raster_path, measurement)
+                        raster_lyr = QgsRasterLayer(nc_path, layer_name)
+                        QgsProject.instance().addMapLayer(raster_lyr)
+            else:
+                ext = '.tif'
+                for i, dt in enumerate(data.time):
+                    ds = datetime_to_str(dt)
+                    raster_path = basepath.format(ds) + ext
+                    # TODO add advanced param/s for overview stuff
+                    write_geotiff(raster_path, data, time_index=i,
+                                  profile_override=gtiff_options)
+
+                    update_tags(raster_path, TIFFTAG_DATETIME=datetime_to_str(dt, '%Y:%m:%d %H:%M:%S'))
+
+                    if overviews:
+                        build_overviews(raster_path, gtiff_ovr_options)
+
+                    if stats:
+                        calc_stats(gtiff_ovr_options, stats_options)
+
+                    if add_results:
+                        raster_lyr = QgsRasterLayer(raster_path, basename.format(ds))
+                        QgsProject.instance().addMapLayer(raster_lyr)
+
+                    # TODO return rasters
 
         return {self.OUTPUT_FOLDER: output_folder}

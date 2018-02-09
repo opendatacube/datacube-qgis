@@ -30,7 +30,7 @@ from processing.core.ProcessingConfig import ProcessingConfig, Setting
 from .algs.query import DataCubeQueryAlgorithm
 
 from .qgisutils import get_icon
-from .defaults import (GTIFF_OVR_DEFAULTS, GTIFF_DEFAULTS)
+from .defaults import (GTIFF_OVR_DEFAULTS, GTIFF_DEFAULTS, SETTINGS_GROUP)
 
 
 class DataCubeQueryProvider(QgsProcessingProvider):
@@ -48,30 +48,24 @@ class DataCubeQueryProvider(QgsProcessingProvider):
         # Activate provider by default
         self.activate = True
 
-        # TODO - add GDAL/rio format and overview creation options as settings
         self.settings = [
-            Setting(DataCubeQueryProvider.DESCRIPTION,
-                    'Activate',
-                    self.tr('Activate provider'),
-                    default=True,
-                    valuetype=None),
-            Setting(DataCubeQueryProvider.DESCRIPTION,
+            Setting(SETTINGS_GROUP,
                     'datacube_config_file',
                     self.tr("Open Data Cube database config file"),
                     default='',
                     valuetype=Setting.FILE),
-            Setting(DataCubeQueryProvider.DESCRIPTION,
-                    'build_overviews',
+            Setting(SETTINGS_GROUP,
+                    'datacube_build_overviews',
                     self.tr("Build GeoTiff Overviews"),
                     default=True,
                     valuetype=None),
-            Setting(DataCubeQueryProvider.DESCRIPTION,
-                    'gtiff_options',
+            Setting(SETTINGS_GROUP,
+                    'datacube_gtiff_options',
                     self.tr("GeoTiff Creation Options"),
                     default=json.dumps(GTIFF_DEFAULTS),
                     valuetype=Setting.STRING),
-            Setting(DataCubeQueryProvider.DESCRIPTION,
-                    'gtiff_ovr_options',
+            Setting(SETTINGS_GROUP,
+                    'datacube_gtiff_ovr_options',
                     self.tr("GeoTiff Overview Options"),
                     default=json.dumps(GTIFF_OVR_DEFAULTS),
                     valuetype=Setting.STRING),
