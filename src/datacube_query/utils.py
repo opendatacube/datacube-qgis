@@ -33,13 +33,19 @@ def build_overviews(filename, overview_options):
         mode = 'r'
 
     resampling = GTIFF_OVR_RESAMPLING[options['resampling']]
+
+    # TODO check if enum.Enum or rasterio enums still segfault QGIS3 after release
+    # TODO this is a kludge to mock an Enum as rasterio.io.build_overviews requires an Enum
+    from collections import namedtuple
+    resampling = namedtuple('Enum', 'value')(resampling)
+
     with rio.open(filename, mode) as raster:
         raster.build_overviews(options['factors'], resampling)
         raster.update_tags(ns='rio_overview', resampling=options['resampling'])
 
 
 def calc_stats(filename, stats_options):
-    pass # TODO
+    pass # TODO calc_stats
 
 
 def datetime_to_str(datetime64, str_format='%Y-%m-%d'):
@@ -83,12 +89,14 @@ def get_products_and_measurements(config=None):
 
     dc = datacube.Datacube(config=config)
     products = dc.list_products()
+    products = products[~products['name'].str.contains("archived")] #TODO this is a kludge/workaround
     measurements = dc.list_measurements()
     measurements.reset_index(inplace=True)
     display_columns = ['name', 'description']
     products = products[display_columns]
     display_columns = ['measurement', 'aliases', 'product']
     measurements = measurements[display_columns]
+    measurements = measurements[~measurements['product'].str.contains('archived')] #TODO this is a kludge/workaround
 
     products.set_index(['name'], inplace=True, drop=False)
     measurements.set_index(['product'], inplace=True, drop=False)
@@ -97,8 +105,13 @@ def get_products_and_measurements(config=None):
     prodmeas['meas_desc'] = prodmeas[['measurement', 'aliases']].apply(lambda x: measurement_desc(*x), axis=1)
 
     for row in prodmeas.itertuples():
-        proddict[row.description]['product'] = row.product
-        proddict[row.description]['measurements'][row.meas_desc] = row.measurement
+        # Description is not unique
+        # proddict[row.description]['product'] = row.product
+        # proddict[row.description]['measurements'][row.meas_desc] = row.measurement
+        description = '{} ({})'.format(row.description, row.name)
+        proddict[description]['product'] = row.product
+        proddict[description]['measurements'][row.meas_desc] = row.measurement
+
 
     return proddict
 
@@ -129,7 +142,7 @@ def get_products_and_measurements(config=None):
 
 def lcase_dict(adict):
     ret_dict = {}
-    for k, v in adict.iteritems():
+    for k, v in adict.items():
         try:
             ret_dict[k.lower()] = v
         except TypeError:
@@ -164,10 +177,10 @@ def run_query(product, measurements, date_range, extent, query_crs,
 
     datasets = dc.index.datasets.search_eager(**query_obj.search_terms)
 
-    if not datasets:
-        raise RuntimeError('No datasets found')
-        # return
-
+    # if not datasets:
+    #     raise RuntimeError('No datasets found')
+    #     # return
+    #
     # TODO Masking
     # - test for PQ product
     # - apply default mask
@@ -179,6 +192,11 @@ def run_query(product, measurements, date_range, extent, query_crs,
         query['output_crs'] = str(output_crs)
     if output_res is not None:
         query['resolution'] = output_res
+
+    print(query)
+    if not datasets:
+        raise RuntimeError('No datasets found')
+        # return
 
     data = dc.load(**query)
 
