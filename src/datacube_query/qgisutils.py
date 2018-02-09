@@ -3,14 +3,14 @@ from collections import defaultdict
 
 from processing.core.ProcessingConfig import ProcessingConfig
 
-from qgis.core import QgsMessageLog
+from qgis.core import Qgis, QgsApplication
 from qgis.PyQt.QtGui import QIcon
 
 
 class LOGLEVEL(object): #TODO for some reason using an Enum here segfaults QGIS?!?!?
-    INFO = QgsMessageLog.INFO
-    WARNING = QgsMessageLog.WARNING
-    CRITICAL = QgsMessageLog.CRITICAL
+    INFO = Qgis.Info
+    WARNING = Qgis.Warning
+    CRITICAL = Qgis.Critical
 
 
 def get_icon(basename):
@@ -35,13 +35,12 @@ def get_settings(key=None):
 
 
 def log_message(message,
-                level=QgsMessageLog.INFO,
+                level=Qgis.Info,
                 translator=None):
 
     title = "Open Data Cube Query"
     if translator is not None:
         message = translator(message, message)
 
-    QgsMessageLog.logMessage(message, title, level)
-
+    QgsApplication.messageLog((message, title, level))
 
