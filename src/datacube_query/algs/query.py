@@ -129,19 +129,15 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         self.addParameter(ParameterExtent(self.PARAM_EXTENT,
                                           self.tr(self.PARAM_EXTENT)))
 
-        # "Advanced" Params (just to reduce interface clutter)
         param = ParameterBoolean(self.PARAM_FORMAT,
                                  self.tr(self.PARAM_FORMAT), defaultValue=False)
-        param.isAdvanced = True
         self.addParameter(param)
 
         param = ParameterCrs(self.PARAM_OUTPUT_CRS, self.tr(self.PARAM_OUTPUT_CRS), optional=True)
-        param.isAdvanced = True
         self.addParameter(param)
 
         param = ParameterNumber(self.PARAM_OUTPUT_RESOLUTION, self.tr(self.PARAM_OUTPUT_RESOLUTION),
                                optional=True, defaultValue=None)
-        param.isAdvanced = True
         self.addParameter(param)
 
         # Output/s
