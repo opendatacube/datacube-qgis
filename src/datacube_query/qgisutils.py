@@ -42,5 +42,5 @@ def log_message(message,
     if translator is not None:
         message = translator(message, message)
 
-    QgsApplication.messageLog((message, title, level))
+    QgsApplication.instance().messageLog().logMessage(message, title, level)
 
