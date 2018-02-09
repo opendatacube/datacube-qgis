@@ -19,12 +19,12 @@ from sqlalchemy.exc import SQLAlchemyError
 from processing.core.parameters import (QgsProcessingParameterBoolean as ParameterBoolean,
                                         QgsProcessingParameterCrs as ParameterCrs,
                                         QgsProcessingParameterExtent as ParameterExtent,
-                                        QgsProcessingParameterEnum as ParameterEnum,
                                         QgsProcessingParameterString as ParameterString,
                                         QgsProcessingParameterNumber as ParameterNumber,
                                         QgsProcessingParameterFolderDestination as ParameterFolderDestination)
 
-from processing.core.outputs import QgsProcessingOutputFolder as OutputFolder
+from processing.core.outputs import (QgsProcessingOutputFolder as OutputFolder,
+                                     QgsProcessingOutputRasterLayer as OutputRasterLayer)
 
 from qgis.core import QgsRasterLayer, QgsProject
 
@@ -82,15 +82,23 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
             return False, self.tr('Please select at least one product')
         return super().checkParameterValues(parameters, context)
 
-    # def create(self):
-    #     pass
-    #
     def createInstance(self):
-        try:products = self.get_products_and_measurements()
-        except SQLAlchemyError as e:
-            log_message('Unable to connect to a running Data Cube instance',
-                        LOGLEVEL.WARNING)
-            products = None
+        try:
+            products = self.get_products_and_measurements()
+        except: # SQLAlchemyError: #TODO add custom exception classes?
+            # TODO re-enable warning messages when QGIS stops segfaulting...
+
+            # 'Orrible kludge to get the message across
+            print('Unable to connect to a running Data Cube instance')
+            products = {'Unable to connect to a running Data Cube instance':{'measurements':{}}}
+
+            # log_message('Unable to connect to a running Data Cube instance',
+            #            LOGLEVEL.WARNING) #segfault
+            # import warnings
+            # warnings.showwarning('Unable to connect to a running Data Cube instance') #segfault
+            #
+            # raise RuntimeError('Unable to connect to a running Data Cube instance') #segfault
+
 
         return self.__class__(products)
 
@@ -98,7 +106,6 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         return self.tr('Data Cube Query')
 
     def get_products_and_measurements(self):
-
         config_file = self.get_settings()['datacube_config_file'] or None
         return get_products_and_measurements(config=config_file)
 
@@ -137,7 +144,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         self.addParameter(param)
 
         param = ParameterNumber(self.PARAM_OUTPUT_RESOLUTION, self.tr(self.PARAM_OUTPUT_RESOLUTION),
-                               optional=True, defaultValue=None)
+                               type=ParameterNumber.Double, optional=True, defaultValue=None)
         self.addParameter(param)
 
         # Output/s
@@ -196,6 +203,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         # TODO Debug Logging
         # TODO Error handling
 
+        outputs = {}
         for product, measurements in products.items():
             data = run_query(product,
                              measurements,
@@ -233,7 +241,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
                 for i, dt in enumerate(data.time):
                     ds = datetime_to_str(dt)
                     raster_path = basepath.format(ds) + ext
-                    # TODO add advanced param/s for overview stuff
+
                     write_geotiff(raster_path, data, time_index=i,
                                   profile_override=gtiff_options)
 
@@ -242,13 +250,19 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
                     if overviews:
                         build_overviews(raster_path, gtiff_ovr_options)
 
+                    #TODO
                     if stats:
                         calc_stats(gtiff_ovr_options, stats_options)
 
                     if add_results:
-                        raster_lyr = QgsRasterLayer(raster_path, basename.format(ds))
+                        lyr_name =  basename.format(ds)
+                        raster_lyr = QgsRasterLayer(raster_path, lyr_name)
                         QgsProject.instance().addMapLayer(raster_lyr)
 
-                    # TODO return rasters
+                        # TODO return rasters
+                        self.addOutput(OutputRasterLayer(lyr_name, lyr_name))
+                        outputs[lyr_name] = raster_lyr
 
-        return {self.OUTPUT_FOLDER: output_folder}
+        results = {self.OUTPUT_FOLDER: output_folder}
+        results.update(outputs)
+        return results

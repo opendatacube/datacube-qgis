@@ -5,6 +5,7 @@ from processing.core.ProcessingConfig import ProcessingConfig
 
 from qgis.core import Qgis, QgsApplication
 from qgis.PyQt.QtGui import QIcon
+from qgis.utils import showException, showWarning
 
 
 class LOGLEVEL(object): #TODO for some reason using an Enum here segfaults QGIS?!?!?
@@ -42,5 +43,7 @@ def log_message(message,
     if translator is not None:
         message = translator(message, message)
 
-    QgsApplication.instance().messageLog().logMessage(message, title, level)
+    # QgsApplication.instance().messageLog().logMessage(message, title, level)
+    # QgsApplication.messageLog().logMessage(message, title, level)
+    print(message)
 
