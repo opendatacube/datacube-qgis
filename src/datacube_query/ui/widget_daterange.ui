@@ -37,14 +37,14 @@
        <second>0</second>
        <year>1971</year>
        <month>12</month>
-       <day>31</day>
+       <day>30</day>
       </datetime>
      </property>
      <property name="minimumDate">
       <date>
        <year>1971</year>
        <month>12</month>
-       <day>31</day>
+       <day>30</day>
       </date>
      </property>
      <property name="currentSection">
