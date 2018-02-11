@@ -8,25 +8,22 @@ __revision__ = '$Format:%H$'
 
 import os
 from collections import defaultdict
-from datetime import date
 import json
 
 from datacube.storage.storage import write_dataset_to_netcdf as write_netcdf
 
-import pandas as pd
 from sqlalchemy.exc import SQLAlchemyError
 
 from processing.core.parameters import (QgsProcessingParameterBoolean as ParameterBoolean,
                                         QgsProcessingParameterCrs as ParameterCrs,
                                         QgsProcessingParameterExtent as ParameterExtent,
-                                        QgsProcessingParameterString as ParameterString,
                                         QgsProcessingParameterNumber as ParameterNumber,
                                         QgsProcessingParameterFolderDestination as ParameterFolderDestination)
 
 from processing.core.outputs import (QgsProcessingOutputFolder as OutputFolder,
                                      QgsProcessingOutputRasterLayer as OutputRasterLayer)
 
-from qgis.core import QgsRasterLayer, QgsProject
+from qgis.core import QgsProcessingContext
 
 from .base import BaseAlgorithm
 from ..parameters import ParameterDateRange, ParameterProducts
@@ -51,11 +48,12 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
     # TODO docstring
 
     OUTPUT_FOLDER = 'Output Directory'
+    OUTPUT_LAYERS = 'Output Layers'
 
-    # TODO ?
-    # PARAM_PRODUCT_TYPE = 'Input Product Type'
-    # platform
-    # instrument
+    # TODO ??? Add more input params.
+    # PARAM_PRODUCT_TYPE   # Would need to build a signal/slot filter for PARAM_PRODUCTS widget
+    # PARAM_PLATFORM
+    # PARAM_INSTRUMENT
     # /TODO
     PARAM_PRODUCTS = 'Product and measurements'
     PARAM_DATE_RANGE = 'Date range (yyyy-mm-dd)'
@@ -85,12 +83,12 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
     def createInstance(self):
         try:
             products = self.get_products_and_measurements()
-        except: # SQLAlchemyError: #TODO add custom exception classes?
+        except:  # SQLAlchemyError: #TODO add custom exception classes?
             # TODO re-enable warning messages when QGIS stops segfaulting...
 
             # 'Orrible kludge to get the message across
             print('Unable to connect to a running Data Cube instance')
-            products = {'Unable to connect to a running Data Cube instance':{'measurements':{}}}
+            products = {'Unable to connect to a running Data Cube instance': {'measurements': {}}}
 
             # log_message('Unable to connect to a running Data Cube instance',
             #            LOGLEVEL.WARNING) #segfault
@@ -98,7 +96,6 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
             # warnings.showwarning('Unable to connect to a running Data Cube instance') #segfault
             #
             # raise RuntimeError('Unable to connect to a running Data Cube instance') #segfault
-
 
         return self.__class__(products)
 
@@ -128,7 +125,8 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         self.addParameter(ParameterProducts(self.PARAM_PRODUCTS,
                                             self.tr(self.PARAM_PRODUCTS),
                                             items=items
-                                           ))
+                                           )
+                          )
 
         self.addParameter(ParameterDateRange(self.PARAM_DATE_RANGE,
                                              self.tr(self.PARAM_DATE_RANGE),
@@ -144,13 +142,13 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         self.addParameter(param)
 
         param = ParameterNumber(self.PARAM_OUTPUT_RESOLUTION, self.tr(self.PARAM_OUTPUT_RESOLUTION),
-                               type=ParameterNumber.Double, optional=True, defaultValue=None)
+                                type=ParameterNumber.Double, optional=True, defaultValue=None)
         self.addParameter(param)
 
         # Output/s
         self.addParameter(ParameterFolderDestination(self.OUTPUT_FOLDER,
                                                      self.tr(self.OUTPUT_FOLDER)))
-        #self.addOutput(OutputFolder(self.OUTPUT_FOLDER, self.tr(self.OUTPUT_FOLDER)))
+        # self.addOutput(OutputFolder(self.OUTPUT_FOLDER, self.tr(self.OUTPUT_FOLDER)))
 
     def prepareAlgorithm(self, parameters, context, feedback):
         """TODO docstring"""
@@ -177,9 +175,9 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         date_range = self.parameterAsString(parameters, self.PARAM_DATE_RANGE, context)
         date_range = json.loads(date_range)
 
-        extent = self.parameterAsExtent(parameters, self.PARAM_EXTENT, context) #QgsRectangle
+        extent = self.parameterAsExtent(parameters, self.PARAM_EXTENT, context)  # QgsRectangle
         extent = [extent.xMinimum(), extent.yMinimum(), extent.xMaximum(), extent.yMaximum()]
-        extent_crs = self.parameterAsExtentCrs(parameters, self.PARAM_EXTENT, context) # QgsCoordinateReferenceSystem
+        extent_crs = self.parameterAsExtentCrs(parameters, self.PARAM_EXTENT, context)  # QgsCoordinateReferenceSystem
         extent_crs = extent_crs.authid()
 
         # TODO add_results = self.parameterAsBool(parameters, self.PARAM_ADD_TO_MAP, context)
@@ -197,7 +195,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
         dask_chunks = {'time': 1}
 
-        stats = False # TODO from Settings
+        stats = False  # TODO from Settings
 
         # TODO Progress (QProgressBar+iface.messageBar/iface.mainWindow().showMessage)
         # TODO Debug Logging
@@ -234,8 +232,11 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
                     for measurement in measurements:
                         layer_name = '{}_{}_{}'.format(product, measurement, dt)
                         nc_path = 'NETCDF:"{}":{}'.format(raster_path, measurement)
-                        raster_lyr = QgsRasterLayer(nc_path, layer_name)
-                        QgsProject.instance().addMapLayer(raster_lyr)
+                        # raster_lyr = QgsRasterLayer(nc_path, layer_name)
+                        # QgsProject.instance().addMapLayer(raster_lyr)
+                        context.addLayerToLoadOnCompletion(nc_path,
+                                QgsProcessingContext.LayerDetails(name=layer_name, project=context.project()))
+
             else:
                 ext = '.tif'
                 for i, dt in enumerate(data.time):
@@ -250,18 +251,19 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
                     if overviews:
                         build_overviews(raster_path, gtiff_ovr_options)
 
-                    #TODO
+                    # TODO
                     if stats:
                         calc_stats(gtiff_ovr_options, stats_options)
 
                     if add_results:
-                        lyr_name =  basename.format(ds)
-                        raster_lyr = QgsRasterLayer(raster_path, lyr_name)
-                        QgsProject.instance().addMapLayer(raster_lyr)
+                        lyr_name = basename.format(ds)
+                        # raster_lyr = QgsRasterLayer(raster_path, lyr_name)
+                        context.addLayerToLoadOnCompletion(raster_path,
+                                QgsProcessingContext.LayerDetails(name=lyr_name, project=context.project()))
 
                         # TODO return rasters
-                        self.addOutput(OutputRasterLayer(lyr_name, lyr_name))
-                        outputs[lyr_name] = raster_lyr
+                        # self.addOutput(OutputRasterLayer(lyr_name, lyr_name))
+                        # outputs[lyr_name] = raster_lyr
 
         results = {self.OUTPUT_FOLDER: output_folder}
         results.update(outputs)
