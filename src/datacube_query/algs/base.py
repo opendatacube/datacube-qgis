@@ -14,6 +14,7 @@ from ..qgisutils import get_icon, log_message, get_settings
 
 
 class BaseAlgorithm(QgsProcessingAlgorithm):
+    """Super class for multiple Data Cube algorithms"""
 
     def __init__(self):
         super().__init__()

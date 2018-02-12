@@ -10,7 +10,6 @@ import os
 from collections import defaultdict
 import json
 
-from datacube.storage.storage import write_dataset_to_netcdf as write_netcdf
 
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -21,22 +20,27 @@ from processing.core.parameters import (QgsProcessingParameterBoolean as Paramet
                                         QgsProcessingParameterFolderDestination as ParameterFolderDestination)
 
 from processing.core.outputs import (QgsProcessingOutputFolder as OutputFolder,
+                                     QgsProcessingOutputMultipleLayers as OutputMultipleLayers,
                                      QgsProcessingOutputRasterLayer as OutputRasterLayer)
 
-from qgis.core import QgsProcessingContext
+from qgis.core import (QgsLayerDefinition,
+                       QgsLogger,
+                       QgsProcessingContext,
+                       QgsProcessingException)
 
 from .base import BaseAlgorithm
-from ..parameters import ParameterDateRange, ParameterProducts
+from ..exceptions import NoDataError
+from ..parameters import (ParameterDateRange, ParameterProducts)
 from ..qgisutils import (get_icon, log_message, LOGLEVEL)
 from ..utils import (
     build_overviews,
-    calc_stats,
     datetime_to_str,
     get_products_and_measurements,
     run_query,
     str_snip,
     update_tags,
     write_geotiff,
+    write_netcdf
 )
 
 
@@ -80,24 +84,15 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
             return False, self.tr('Please select at least one product')
         return super().checkParameterValues(parameters, context)
 
-    def createInstance(self):
+    def createInstance(self, config=None):
         try:
             products = self.get_products_and_measurements()
-        except:  # SQLAlchemyError: #TODO add custom exception classes?
-            # TODO re-enable warning messages when QGIS stops segfaulting...
+        except Exception:  # SQLAlchemyError: #TODO add custom exception classes?
+            msg = 'Unable to connect to a running Data Cube instance'
+            QgsLogger().warning(msg)
+            products = {msg: {'measurements': {}}}
 
-            # 'Orrible kludge to get the message across
-            print('Unable to connect to a running Data Cube instance')
-            products = {'Unable to connect to a running Data Cube instance': {'measurements': {}}}
-
-            # log_message('Unable to connect to a running Data Cube instance',
-            #            LOGLEVEL.WARNING) #segfault
-            # import warnings
-            # warnings.showwarning('Unable to connect to a running Data Cube instance') #segfault
-            #
-            # raise RuntimeError('Unable to connect to a running Data Cube instance') #segfault
-
-        return self.__class__(products)
+        return type(self)(products)
 
     def displayName(self, *args, **kwargs):
         return self.tr('Data Cube Query')
@@ -124,9 +119,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
         self.addParameter(ParameterProducts(self.PARAM_PRODUCTS,
                                             self.tr(self.PARAM_PRODUCTS),
-                                            items=items
-                                           )
-                          )
+                                            items=items))
 
         self.addParameter(ParameterDateRange(self.PARAM_DATE_RANGE,
                                              self.tr(self.PARAM_DATE_RANGE),
@@ -134,6 +127,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         self.addParameter(ParameterExtent(self.PARAM_EXTENT,
                                           self.tr(self.PARAM_EXTENT)))
 
+        # FIXME - Disable NetCDF - https://gis.stackexchange.com/q/271525/2856
         param = ParameterBoolean(self.PARAM_FORMAT,
                                  self.tr(self.PARAM_FORMAT), defaultValue=False)
         self.addParameter(param)
@@ -148,7 +142,9 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         # Output/s
         self.addParameter(ParameterFolderDestination(self.OUTPUT_FOLDER,
                                                      self.tr(self.OUTPUT_FOLDER)))
-        # self.addOutput(OutputFolder(self.OUTPUT_FOLDER, self.tr(self.OUTPUT_FOLDER)))
+
+        self.addOutput(OutputMultipleLayers(self.OUTPUT_LAYERS, self.tr(self.OUTPUT_LAYERS)))
+
 
     def prepareAlgorithm(self, parameters, context, feedback):
         """TODO docstring"""
@@ -156,6 +152,10 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
     def processAlgorithm(self, parameters, context, feedback):
         """TODO docstring"""
+
+        self.feedback = feedback
+        self.context = context
+        self.project = context.project()
 
         # General options
         settings = self.get_settings()
@@ -195,76 +195,85 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
         dask_chunks = {'time': 1}
 
-        stats = False  # TODO from Settings
+        output_layers = self.execute(products, date_range, extent, extent_crs,
+                                     output_crs, output_res, output_netcdf, output_folder,
+                                     config_file, dask_chunks, add_results, overviews,
+                                     gtiff_options, gtiff_ovr_options)
+        results = {self.OUTPUT_FOLDER: output_folder, self.OUTPUT_LAYERS: output_layers}
+        return results
 
-        # TODO Progress (QProgressBar+iface.messageBar/iface.mainWindow().showMessage)
-        # TODO Debug Logging
-        # TODO Error handling
+    def execute(self, products, date_range, extent, extent_crs,
+                output_crs, output_res, output_netcdf, output_folder,
+                config_file, dask_chunks, add_results, overviews,
+                gtiff_options, gtiff_ovr_options):
 
-        outputs = {}
-        for product, measurements in products.items():
-            data = run_query(product,
-                             measurements,
-                             date_range,
-                             extent,
-                             extent_crs,
-                             output_crs,
-                             output_res,
-                             config_file,
-                             dask_chunks=dask_chunks
-                             )
+        output_layers = []
+        progress_total = 100 / (10*len(products))
+        self.feedback.setProgress(0)
 
-            if data is None:
-                raise RuntimeError('No data found')
+        for idx, (product, measurements) in enumerate(products.items()):
+
+            if self.feedback.isCanceled():
+                return output_layers
+
+            self.feedback.setProgressText('Processing {}'.format(product))
+
+            try:
+                data = run_query(product, measurements,
+                                 date_range, extent,
+                                 extent_crs, output_crs,
+                                 output_res, config_file,
+                                 dask_chunks=dask_chunks)
+
+            except NoDataError as err:
+                self.feedback.pushInfo('{}'.format(err))
+                self.feedback.setProgress(int((idx + 1) * 10 * progress_total))
+                continue
 
             basename = '{}_{}'.format(product, '{}')
             basepath = os.path.join(output_folder, basename)
 
+            self.feedback.setProgressText('Saving outputs for {}'.format(product))
             if output_netcdf:
-                ext = '.nc'
                 start_date = datetime_to_str(data.time[0])
                 end_date = datetime_to_str(data.time[-1])
                 dt = '{}_{}'.format(start_date, end_date)
-                raster_path = basepath.format(dt) + ext
-                write_netcdf(data, raster_path)
+                raster_path = basepath.format(dt) + '.nc'
+                write_netcdf(data, raster_path, overwrite=True)
+                # output_layers += [raster_path]
 
                 if add_results:
-                    for measurement in measurements:
-                        layer_name = '{}_{}_{}'.format(product, measurement, dt)
+                    for i, measurement in enumerate(measurements):
                         nc_path = 'NETCDF:"{}":{}'.format(raster_path, measurement)
-                        # raster_lyr = QgsRasterLayer(nc_path, layer_name)
-                        # QgsProject.instance().addMapLayer(raster_lyr)
-                        context.addLayerToLoadOnCompletion(nc_path,
-                                QgsProcessingContext.LayerDetails(name=layer_name, project=context.project()))
+                        layer_name = 'NETCDF:"{}":{}'.format(os.path.basename(raster_path), measurement)
+                        self.context.addLayerToLoadOnCompletion(nc_path.strip(),
+                                QgsProcessingContext.LayerDetails(name=layer_name.strip(), project=self.project))
+                        output_layers += [nc_path]
+
+                    self.feedback.setProgress(int((idx * 10 + i + 1) * progress_total))
 
             else:
-                ext = '.tif'
                 for i, dt in enumerate(data.time):
                     ds = datetime_to_str(dt)
-                    raster_path = basepath.format(ds) + ext
+                    raster_path = basepath.format(ds) + '.tif'
 
                     write_geotiff(raster_path, data, time_index=i,
-                                  profile_override=gtiff_options)
+                                  profile_override=gtiff_options, overwrite=True)
 
                     update_tags(raster_path, TIFFTAG_DATETIME=datetime_to_str(dt, '%Y:%m:%d %H:%M:%S'))
 
                     if overviews:
                         build_overviews(raster_path, gtiff_ovr_options)
 
-                    # TODO
-                    if stats:
-                        calc_stats(gtiff_ovr_options, stats_options)
-
                     if add_results:
                         lyr_name = basename.format(ds)
-                        # raster_lyr = QgsRasterLayer(raster_path, lyr_name)
-                        context.addLayerToLoadOnCompletion(raster_path,
-                                QgsProcessingContext.LayerDetails(name=lyr_name, project=context.project()))
+                        self.context.addLayerToLoadOnCompletion(raster_path,
+                                QgsProcessingContext.LayerDetails(name=lyr_name, project=self.project))
 
-                        # TODO return rasters
-                        # self.addOutput(OutputRasterLayer(lyr_name, lyr_name))
-                        # outputs[lyr_name] = raster_lyr
+                        output_layers += [raster_path]
 
-        results = {self.OUTPUT_FOLDER: output_folder}
-        results.update(outputs)
-        return results
+                    self.feedback.setProgress(int((idx * 10 + i + 1) * progress_total))
+
+            self.feedback.setProgress(int((idx + 1) * 10 * progress_total))
+
+        return output_layers
