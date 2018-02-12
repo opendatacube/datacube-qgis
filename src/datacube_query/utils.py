@@ -15,6 +15,7 @@ from .defaults import (GTIFF_OVR_DEFAULTS,
                        GTIFF_COMPRESSION,
                        GTIFF_DEFAULTS,
                        GTIFF_OVR_RESAMPLING)
+from .exceptions import NoDataError
 
 # This will get replaced with a git SHA1 when you do a git archive
 __revision__ = '$Format:%H$'
@@ -89,14 +90,14 @@ def get_products_and_measurements(config=None):
 
     dc = datacube.Datacube(config=config)
     products = dc.list_products()
-    products = products[~products['name'].str.contains("archived")] #TODO this is a kludge/workaround
+    # products = products[~products['name'].str.contains("archived")] #TODO this is a kludge/workaround
     measurements = dc.list_measurements()
     measurements.reset_index(inplace=True)
     display_columns = ['name', 'description']
     products = products[display_columns]
     display_columns = ['measurement', 'aliases', 'product']
     measurements = measurements[display_columns]
-    measurements = measurements[~measurements['product'].str.contains('archived')] #TODO this is a kludge/workaround
+    # measurements = measurements[~measurements['product'].str.contains('archived')] #TODO this is a kludge/workaround
 
     products.set_index(['name'], inplace=True, drop=False)
     measurements.set_index(['product'], inplace=True, drop=False)
@@ -115,30 +116,6 @@ def get_products_and_measurements(config=None):
 
     return proddict
 
-
-# def get_products_and_measurements(config=None, details=True):
-#     """ Return dict of product strings and measurements list of strings:
-#             {'product': ['list', 'of', 'measurements']}
-#
-#         e.g.
-#             {'ls8_nbar_albers', ['red', 'green', 'blue'],
-#              'ls8_fc_albers', ['nir']}
-#
-#     """
-#
-#     dc = datacube.Datacube(config=config)
-#     measurements = dc.list_measurements(with_pandas=False)
-#
-#     prod_meas = defaultdict(list)
-#
-#     for measurement in measurements:
-#         product = measurement.pop('product')
-#         if details:
-#             prod_meas[product].append(measurement)
-#         else:
-#             prod_meas[product].append(measurement['measurement'])
-#
-#     return prod_meas
 
 def lcase_dict(adict):
     ret_dict = {}
@@ -177,10 +154,6 @@ def run_query(product, measurements, date_range, extent, query_crs,
 
     datasets = dc.index.datasets.search_eager(**query_obj.search_terms)
 
-    # if not datasets:
-    #     raise RuntimeError('No datasets found')
-    #     # return
-    #
     # TODO Masking
     # - test for PQ product
     # - apply default mask
@@ -193,12 +166,13 @@ def run_query(product, measurements, date_range, extent, query_crs,
     if output_res is not None:
         query['resolution'] = output_res
 
-    print(query)
     if not datasets:
-        raise RuntimeError('No datasets found')
-        # return
+        raise NoDataError('No datasets found for query:\n{}'.format(str(query)))
 
     data = dc.load(**query)
+
+    if not data.variables:
+        raise NoDataError('No data found for query:\n{}'.format(str(query)))
 
     return data
 

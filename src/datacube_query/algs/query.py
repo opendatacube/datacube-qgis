@@ -26,6 +26,7 @@ from processing.core.outputs import (QgsProcessingOutputFolder as OutputFolder,
 from qgis.core import QgsProcessingContext
 
 from .base import BaseAlgorithm
+from ..exceptions import NoDataError
 from ..parameters import ParameterDateRange, ParameterProducts
 from ..qgisutils import (get_icon, log_message, LOGLEVEL)
 from ..utils import (
@@ -83,7 +84,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
     def createInstance(self):
         try:
             products = self.get_products_and_measurements()
-        except:  # SQLAlchemyError: #TODO add custom exception classes?
+        except Exception:  # SQLAlchemyError: #TODO add custom exception classes?
             # TODO re-enable warning messages when QGIS stops segfaulting...
 
             # 'Orrible kludge to get the message across
@@ -124,9 +125,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
         self.addParameter(ParameterProducts(self.PARAM_PRODUCTS,
                                             self.tr(self.PARAM_PRODUCTS),
-                                            items=items
-                                           )
-                          )
+                                            items=items))
 
         self.addParameter(ParameterDateRange(self.PARAM_DATE_RANGE,
                                              self.tr(self.PARAM_DATE_RANGE),
@@ -197,13 +196,22 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
         stats = False  # TODO from Settings
 
-        # TODO Progress (QProgressBar+iface.messageBar/iface.mainWindow().showMessage)
         # TODO Debug Logging
         # TODO Error handling
 
         outputs = {}
-        for product, measurements in products.items():
-            data = run_query(product,
+        progress_total = 100 / (10*len(products))
+        feedback.setProgress(0)
+
+        for idx, (product, measurements) in enumerate(products.items()):
+
+            if feedback.isCanceled():
+                return
+
+            feedback.setProgressText('Processing {}'.format(product))
+
+            try:
+                data = run_query(product,
                              measurements,
                              date_range,
                              extent,
@@ -213,13 +221,15 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
                              config_file,
                              dask_chunks=dask_chunks
                              )
-
-            if data is None:
-                raise RuntimeError('No data found')
+            except NoDataError as err:
+                feedback.pushInfo('{}'.format(err))
+                feedback.setProgress(int((idx + 1) * 10 * progress_total))
+                continue
 
             basename = '{}_{}'.format(product, '{}')
             basepath = os.path.join(output_folder, basename)
 
+            feedback.setProgressText('Saving outputs for {}'.format(product))
             if output_netcdf:
                 ext = '.nc'
                 start_date = datetime_to_str(data.time[0])
@@ -229,13 +239,13 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
                 write_netcdf(data, raster_path)
 
                 if add_results:
-                    for measurement in measurements:
+                    for i, measurement in enumerate(measurements):
                         layer_name = '{}_{}_{}'.format(product, measurement, dt)
                         nc_path = 'NETCDF:"{}":{}'.format(raster_path, measurement)
-                        # raster_lyr = QgsRasterLayer(nc_path, layer_name)
-                        # QgsProject.instance().addMapLayer(raster_lyr)
                         context.addLayerToLoadOnCompletion(nc_path,
                                 QgsProcessingContext.LayerDetails(name=layer_name, project=context.project()))
+
+                    feedback.setProgress(int((idx * 10 + i + 1) * progress_total))
 
             else:
                 ext = '.tif'
@@ -264,6 +274,10 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
                         # TODO return rasters
                         # self.addOutput(OutputRasterLayer(lyr_name, lyr_name))
                         # outputs[lyr_name] = raster_lyr
+
+                    feedback.setProgress(int((idx * 10 + i + 1) * progress_total))
+
+            feedback.setProgress(int((idx + 1) * 10 * progress_total))
 
         results = {self.OUTPUT_FOLDER: output_folder}
         results.update(outputs)
