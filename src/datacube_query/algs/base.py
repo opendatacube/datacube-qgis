@@ -10,7 +10,7 @@ from qgis.core import QgsProcessingAlgorithm
 from qgis.PyQt.QtCore import QCoreApplication
 
 from ..defaults import SETTINGS_GROUP
-from ..qgisutils import get_icon, log_message, get_settings
+from ..qgisutils import get_icon, get_settings
 
 
 class BaseAlgorithm(QgsProcessingAlgorithm):
