@@ -6,10 +6,9 @@ __copyright__ = '(C) 2017 by Geoscience Australia'
 # This will get replaced with a git SHA1 when you do a git archive
 __revision__ = '$Format:%H$'
 
-import os
 from collections import defaultdict
 import json
-
+from pathlib import Path
 
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -19,9 +18,7 @@ from processing.core.parameters import (QgsProcessingParameterBoolean as Paramet
                                         QgsProcessingParameterNumber as ParameterNumber,
                                         QgsProcessingParameterFolderDestination as ParameterFolderDestination)
 
-from processing.core.outputs import (QgsProcessingOutputFolder as OutputFolder,
-                                     QgsProcessingOutputMultipleLayers as OutputMultipleLayers,
-                                     QgsProcessingOutputRasterLayer as OutputRasterLayer)
+from processing.core.outputs import (QgsProcessingOutputMultipleLayers as OutputMultipleLayers)
 
 from qgis.core import (QgsLayerDefinition,
                        QgsLogger,
@@ -231,7 +228,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
                 continue
 
             basename = '{}_{}'.format(product, '{}')
-            basepath = os.path.join(output_folder, basename)
+            basepath = str(Path(output_folder, basename))
 
             self.feedback.setProgressText('Saving outputs for {}'.format(product))
             if output_netcdf:
@@ -245,7 +242,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
                 if add_results:
                     for i, measurement in enumerate(measurements):
                         nc_path = 'NETCDF:"{}":{}'.format(raster_path, measurement)
-                        layer_name = 'NETCDF:"{}":{}'.format(os.path.basename(raster_path), measurement)
+                        layer_name = 'NETCDF:"{}":{}'.format(Path(raster_path).stem, measurement)
                         self.context.addLayerToLoadOnCompletion(nc_path.strip(),
                                 QgsProcessingContext.LayerDetails(name=layer_name.strip(), project=self.project))
                         output_layers += [nc_path]

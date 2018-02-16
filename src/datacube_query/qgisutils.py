@@ -1,11 +1,10 @@
-import os
 from collections import defaultdict
+from pathlib import Path
 
 from processing.core.ProcessingConfig import ProcessingConfig
 
 from qgis.core import Qgis, QgsApplication
 from qgis.PyQt.QtGui import QIcon
-from qgis.utils import showException, showWarning
 
 
 class LOGLEVEL(object): #TODO for some reason using an Enum here segfaults QGIS?!?!?
@@ -15,12 +14,8 @@ class LOGLEVEL(object): #TODO for some reason using an Enum here segfaults QGIS?
 
 
 def get_icon(basename):
-    filepath = os.path.join(
-        os.path.dirname(__file__),
-        'icons',
-        basename
-    )
-    return QIcon(filepath)
+    filepath = Path(Path(__file__).parent, 'icons', basename)
+    return QIcon(str(filepath))
 
 
 def get_settings(key=None):

@@ -1,6 +1,7 @@
 from collections import defaultdict
 import os
 import json
+from pathlib import Path
 
 from processing.gui.wrappers import WidgetWrapper
 
@@ -8,16 +9,13 @@ from qgis.PyQt import uic
 from qgis.PyQt.QtCore import Qt, QDate
 from qgis.PyQt.QtWidgets import QTreeWidgetItem, QTreeWidgetItemIterator
 
-_ui_path = os.path.join(os.path.dirname(__file__), 'ui')
+_ui_path = Path(Path(__file__).parent, 'ui')
 
 # Work around removal of PyQt5/uic/widget-plugins/qgis_customwidgets.py
 # which breaks QT Designer UI files
 from .ui.widget_daterange import WIDGET_DATE_RANGE, BASE_DATE_RANGE
-# WIDGET_DATE_RANGE, BASE_DATE_RANGE = uic.loadUiType(
-#     os.path.join(_ui_path, 'widget_daterange.ui'))
-
-WIDGET_PRODUCT, BASE_PRODUCT = uic.loadUiType(
-    os.path.join(_ui_path, 'widget_product.ui'))
+# WIDGET_DATE_RANGE, BASE_DATE_RANGE = uic.loadUiType(Path(_ui_path, 'widget_daterange.ui'))
+WIDGET_PRODUCT, BASE_PRODUCT = uic.loadUiType(Path(_ui_path, 'widget_product.ui'))
 
 class WrapperBase(WidgetWrapper):
 
