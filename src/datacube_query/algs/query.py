@@ -12,29 +12,30 @@ from pathlib import Path
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from processing.core.parameters import (QgsProcessingParameterBoolean as ParameterBoolean,
-                                        QgsProcessingParameterCrs as ParameterCrs,
-                                        QgsProcessingParameterExtent as ParameterExtent,
-                                        QgsProcessingParameterNumber as ParameterNumber,
-                                        QgsProcessingParameterFolderDestination as ParameterFolderDestination)
+from processing.core.parameters import (
+    QgsProcessingParameterBoolean as ParameterBoolean,
+    QgsProcessingParameterCrs as ParameterCrs,
+    QgsProcessingParameterExtent as ParameterExtent,
+    QgsProcessingParameterNumber as ParameterNumber,
+    QgsProcessingParameterFolderDestination as ParameterFolderDestination)
 
-from processing.core.outputs import (QgsProcessingOutputMultipleLayers as OutputMultipleLayers)
+from processing.core.outputs import (
+    QgsProcessingOutputMultipleLayers as OutputMultipleLayers)
 
-from qgis.core import (QgsLayerDefinition,
-                       QgsLogger,
-                       QgsProcessingContext,
-                       QgsProcessingException)
+from qgis.core import (
+    QgsLogger,
+    QgsProcessingContext,
+    QgsProcessingException)
 
 from .base import BaseAlgorithm
 from ..exceptions import NoDataError
 from ..parameters import (ParameterDateRange, ParameterProducts)
-from ..qgisutils import (get_icon, log_message, LOGLEVEL)
+from ..qgisutils import (get_icon)
 from ..utils import (
     build_overviews,
     datetime_to_str,
     get_products_and_measurements,
     run_query,
-    str_snip,
     update_tags,
     write_geotiff,
     write_netcdf
@@ -42,11 +43,9 @@ from ..utils import (
 
 
 class DataCubeQueryAlgorithm(BaseAlgorithm):
-    """This is TODO
-
     """
-
-    # TODO docstring
+    Class that represent a "tool" in the processing toolbox.
+    """
 
     OUTPUT_FOLDER = 'Output Directory'
     OUTPUT_LAYERS = 'Output Layers'
@@ -55,7 +54,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
     # PARAM_PRODUCT_TYPE   # Would need to build a signal/slot filter for PARAM_PRODUCTS widget
     # PARAM_PLATFORM
     # PARAM_INSTRUMENT
-    # /TODO
+    # /TODO ???
     PARAM_PRODUCTS = 'Product and measurements'
     PARAM_DATE_RANGE = 'Date range (yyyy-mm-dd)'
     PARAM_EXTENT = 'Query extent'
@@ -67,14 +66,20 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
     PARAM_OUTPUT_RESOLUTION = ('Output pixel resolution '
                                '(required for products with no resolution defined)')
 
-    # TODO error handling with GeoAlgorithmExecutionException
+    # TODO error handling with QgsProcessingException
 
     def __init__(self, products=None):
+        """
+        Initialise the algorithm
+
+        :param dict products: A dict of products as returned by
+            :func:`datacube_query.utils.get_products_and_measurements`
+        """
         super().__init__()
 
         self._icon = get_icon('opendatacube.png')
-        self.config_file = None
         self.products = {} if products is None else products
+        self.outputs = {}
 
     def checkParameterValues(self, parameters, context):
         if self.parameterAsString(parameters, self.PARAM_PRODUCTS, context) == '{}':
@@ -84,7 +89,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
     def createInstance(self, config=None):
         try:
             products = self.get_products_and_measurements()
-        except Exception:  # SQLAlchemyError: #TODO add custom exception classes?
+        except SQLAlchemyError: #TODO add custom exception classes?
             msg = 'Unable to connect to a running Data Cube instance'
             QgsLogger().warning(msg)
             products = {msg: {'measurements': {}}}
@@ -99,6 +104,9 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         return get_products_and_measurements(config=config_file)
 
     def group(self):
+        """
+        The folder the tool is shown in
+        """
         return self.tr('Data Cube Query')
 
     def groupId(self):
@@ -106,7 +114,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
     def initAlgorithm(self, config=None):
         """
-            Define the inputs and output of the algorithm.
+        Define the parameters and output of the algorithm.
         """
 
         # Basic Params
@@ -124,7 +132,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         self.addParameter(ParameterExtent(self.PARAM_EXTENT,
                                           self.tr(self.PARAM_EXTENT)))
 
-        # FIXME - Disable NetCDF - https://gis.stackexchange.com/q/271525/2856
+        # FIXME - May need to disable NetCDF - https://gis.stackexchange.com/q/271525/2856
         param = ParameterBoolean(self.PARAM_FORMAT,
                                  self.tr(self.PARAM_FORMAT), defaultValue=False)
         self.addParameter(param)
@@ -138,17 +146,37 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
         # Output/s
         self.addParameter(ParameterFolderDestination(self.OUTPUT_FOLDER,
-                                                     self.tr(self.OUTPUT_FOLDER)))
+                                                     self.tr(self.OUTPUT_FOLDER)),
+                          createOutput=True)
 
         self.addOutput(OutputMultipleLayers(self.OUTPUT_LAYERS, self.tr(self.OUTPUT_LAYERS)))
 
-
     def prepareAlgorithm(self, parameters, context, feedback):
-        """TODO docstring"""
         return True
 
+    def postProcessAlgorithm(self, context, feedback):
+        """
+        Add resulting layers to map
+
+        :param qgis.core.QgsProcessingContext context:  Threadsafe context in which a processing algorithm is executed
+        :param qgis.core.QgsProcessingFeedback feedback: For providing feedback from a processing algorithm
+        """
+        output_layers = self.outputs if self.outputs else {}
+
+        for layer, layer_name in output_layers.items():
+            context.addLayerToLoadOnCompletion(
+                layer, QgsProcessingContext.LayerDetails(layer_name, context.project()))
+        return {} #Avoid NoneType can not be converted to a QMap instance
+
     def processAlgorithm(self, parameters, context, feedback):
-        """TODO docstring"""
+        """
+        Collect parameters and execute the query
+
+        :param parameters: Input parameters supplied by the processing framework
+        :param qgis.core.QgsProcessingContext context:  Threadsafe context in which a processing algorithm is executed
+        :param qgis.core.QgsProcessingFeedback feedback: For providing feedback from a processing algorithm
+        :return:
+        """
 
         self.feedback = feedback
         self.context = context
@@ -177,9 +205,6 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         extent_crs = self.parameterAsExtentCrs(parameters, self.PARAM_EXTENT, context)  # QgsCoordinateReferenceSystem
         extent_crs = extent_crs.authid()
 
-        # TODO add_results = self.parameterAsBool(parameters, self.PARAM_ADD_TO_MAP, context)
-        add_results = True
-
         output_netcdf = self.parameterAsBool(parameters, self.PARAM_FORMAT, context)
 
         output_crs = self.parameterAsCrs(parameters, self.PARAM_OUTPUT_CRS, context).authid()
@@ -192,28 +217,31 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
         dask_chunks = {'time': 1}
 
-        output_layers = self.execute(products, date_range, extent, extent_crs,
-                                     output_crs, output_res, output_netcdf, output_folder,
-                                     config_file, dask_chunks, add_results, overviews,
-                                     gtiff_options, gtiff_ovr_options)
-        results = {self.OUTPUT_FOLDER: output_folder, self.OUTPUT_LAYERS: output_layers}
+        output_layers = self.execute(
+            products, date_range, extent, extent_crs,
+            output_crs, output_res, output_netcdf, output_folder,
+            config_file, dask_chunks, overviews,
+            gtiff_options, gtiff_ovr_options, feedback)
+
+        results = {self.OUTPUT_FOLDER: output_folder, self.OUTPUT_LAYERS: output_layers.keys()}
+        self.outputs = output_layers # This is used in postProcessAlgorithm
         return results
 
     def execute(self, products, date_range, extent, extent_crs,
                 output_crs, output_res, output_netcdf, output_folder,
-                config_file, dask_chunks, add_results, overviews,
-                gtiff_options, gtiff_ovr_options):
+                config_file, dask_chunks, overviews,
+                gtiff_options, gtiff_ovr_options, feedback):
 
-        output_layers = []
+        output_layers = {}
         progress_total = 100 / (10*len(products))
-        self.feedback.setProgress(0)
+        feedback.setProgress(0)
 
         for idx, (product, measurements) in enumerate(products.items()):
 
-            if self.feedback.isCanceled():
+            if feedback.isCanceled():
                 return output_layers
 
-            self.feedback.setProgressText('Processing {}'.format(product))
+            feedback.setProgressText('Processing {}'.format(product))
 
             try:
                 data = run_query(product, measurements,
@@ -223,31 +251,27 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
                                  dask_chunks=dask_chunks)
 
             except NoDataError as err:
-                self.feedback.pushInfo('{}'.format(err))
-                self.feedback.setProgress(int((idx + 1) * 10 * progress_total))
+                feedback.pushInfo('{}'.format(err))
+                feedback.setProgress(int((idx + 1) * 10 * progress_total))
                 continue
 
             basename = '{}_{}'.format(product, '{}')
             basepath = str(Path(output_folder, basename))
 
-            self.feedback.setProgressText('Saving outputs for {}'.format(product))
+            feedback.setProgressText('Saving outputs for {}'.format(product))
             if output_netcdf:
                 start_date = datetime_to_str(data.time[0])
                 end_date = datetime_to_str(data.time[-1])
                 dt = '{}_{}'.format(start_date, end_date)
                 raster_path = basepath.format(dt) + '.nc'
                 write_netcdf(data, raster_path, overwrite=True)
-                # output_layers += [raster_path]
 
-                if add_results:
-                    for i, measurement in enumerate(measurements):
-                        nc_path = 'NETCDF:"{}":{}'.format(raster_path, measurement)
-                        layer_name = 'NETCDF:"{}":{}'.format(Path(raster_path).stem, measurement)
-                        self.context.addLayerToLoadOnCompletion(nc_path.strip(),
-                                QgsProcessingContext.LayerDetails(name=layer_name.strip(), project=self.project))
-                        output_layers += [nc_path]
+                for i, measurement in enumerate(measurements):
+                    nc_path = 'NETCDF:"{}":{}'.format(raster_path, measurement)
+                    layer_name = 'NETCDF:"{}":{}'.format(Path(raster_path).stem, measurement)
+                    output_layers[nc_path] = layer_name
 
-                    self.feedback.setProgress(int((idx * 10 + i + 1) * progress_total))
+                    feedback.setProgress(int((idx * 10 + i + 1) * progress_total))
 
             else:
                 for i, dt in enumerate(data.time):
@@ -262,15 +286,11 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
                     if overviews:
                         build_overviews(raster_path, gtiff_ovr_options)
 
-                    if add_results:
-                        lyr_name = basename.format(ds)
-                        self.context.addLayerToLoadOnCompletion(raster_path,
-                                QgsProcessingContext.LayerDetails(name=lyr_name, project=self.project))
+                    lyr_name = basename.format(ds)
+                    output_layers[raster_path]=lyr_name
 
-                        output_layers += [raster_path]
+                    feedback.setProgress(int((idx * 10 + i + 1) * progress_total))
 
-                    self.feedback.setProgress(int((idx * 10 + i + 1) * progress_total))
-
-            self.feedback.setProgress(int((idx + 1) * 10 * progress_total))
+            feedback.setProgress(int((idx + 1) * 10 * progress_total))
 
         return output_layers

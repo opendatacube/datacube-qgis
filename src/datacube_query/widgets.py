@@ -17,6 +17,7 @@ from .ui.widget_daterange import WIDGET_DATE_RANGE, BASE_DATE_RANGE
 # WIDGET_DATE_RANGE, BASE_DATE_RANGE = uic.loadUiType(Path(_ui_path, 'widget_daterange.ui'))
 WIDGET_PRODUCT, BASE_PRODUCT = uic.loadUiType(Path(_ui_path, 'widget_product.ui'))
 
+
 class WrapperBase(WidgetWrapper):
 
     def setValue(self, data):
@@ -80,15 +81,6 @@ class WidgetProducts(BASE_PRODUCT, WIDGET_PRODUCT):
 
         self._data = None
         self.set_items(items)
-
-        # In case we need to implement single product selections only
-        # self.tree_products.itemClicked.connect(self.there_can_be_only_one)
-
-    def there_can_be_only_one(self, item, column=0):
-
-        """ Stub for implementing single product selections only"""
-        # Get items, check item != clicked item, uncheck non-clicked parents
-        pass
 
     def get_checked(self):
         return self.get_items(flags=QTreeWidgetItemIterator.Checked)
