@@ -1,4 +1,3 @@
-import os
 from collections import defaultdict
 from datetime import date
 
@@ -22,11 +21,22 @@ from .exceptions import NoDataError
 # This will get replaced with a git SHA1 when you do a git archive
 __revision__ = '$Format:%H$'
 
-# TODO Refactor and move qgis specific code to a separate module?
-# TODO GeoTIFF options and overviews
-
 
 def build_overviews(filename, overview_options):
+    """
+    Build reduced resolution overviews/pyramids for a raster
+
+    :param filename: The raster to build overviews for.
+    :type filename: str
+
+    :param overview_options: Overview options.
+    :type overview_options: dict.
+        Example:
+
+            {"resampling": "average", "factors": [2, 4, 8, 16, 32], "internal_storage": True}
+
+    """
+
     options = GTIFF_OVR_DEFAULTS.copy()
     if overview_options is not None:
         options.update(overview_options)
@@ -48,6 +58,15 @@ def build_overviews(filename, overview_options):
 
 
 def datetime_to_str(datetime64, str_format='%Y-%m-%d'):
+    """
+    Convert a numpy.datetime64 to a string
+
+    :param numpy.datetime64 datetime64: The datetime object.
+    :param str str_format:              String format code.
+
+    :rtype: str
+
+    """
 
     # datetime64 has nanosecond resolution so convert to millisecs
     dt = datetime64.astype(np.int64) // 1000000000
@@ -56,19 +75,19 @@ def datetime_to_str(datetime64, str_format='%Y-%m-%d'):
     return dt.strftime(str_format)
 
 
-def get_products(config=None):
-    # TODO
-    dc = datacube.Datacube(config=config)
-    products = dc.list_products()
-    products = products[['name', 'description']]
-    products.set_index('name', inplace=True)
-    return products.to_dict('index')
-
-
 def get_products_and_measurements(config=None):
-    """ Return dict of products and measurements :
-            {product_description: 'product': product_name,
-                                  'measurements': {measurement_description, measurement_name]}
+    """
+    Get a dict of products and measurements.
+
+    :param str config: The raster to build overviews for.
+    :type config: str or None.
+
+    :return: A dict of products and measurements.
+    :rtype: dict
+
+
+        {product_description: 'product': product_name,
+                              'measurements': {measurement_description, measurement_name]}
 
         e.g.
             {'Landsat 8 NBART 25 metre':
@@ -82,6 +101,7 @@ def get_products_and_measurements(config=None):
                     '6/band_6/swir1': '6',
                     '7/band_7/swir2': '7'}
             }
+        where: measurement_description is derived from measurement name and alias attributes
     """
 
     proddict = defaultdict(lambda : defaultdict(dict))
@@ -116,6 +136,13 @@ def get_products_and_measurements(config=None):
 
 
 def lcase_dict(adict):
+    """
+    Convert the keys in a dict to lowercase (if they're strings).
+
+    :param dict adict: The dict.
+
+    :rtype: dict
+    """
     ret_dict = {}
     for k, v in adict.items():
         try:
@@ -126,6 +153,14 @@ def lcase_dict(adict):
     return ret_dict
 
 def measurement_desc(measurement, aliases):
+    """
+    Generate measurement descriptions from measurement name and aliases.
+
+    :param str measurement: Measurement name.
+    :param list aliases: List of aliases or NaN.
+
+    :rtype: str
+    """
     try:
         if pd.isnull(aliases):
             return measurement
@@ -133,7 +168,6 @@ def measurement_desc(measurement, aliases):
         pass
 
     if measurement in aliases: #Assumes a list...
-        # return '/'.join(aliases)
         del aliases[aliases.index(measurement)]
 
     #return '/'.join([measurement]+aliases) #Assumes a list...
@@ -142,6 +176,28 @@ def measurement_desc(measurement, aliases):
 
 def run_query(product, measurements, date_range, extent, query_crs,
               output_crs=None, output_res=None, config=None, dask_chunks=None):
+    """
+    Build a query, load and return the data.
+
+    :param str product: Product name.
+    :param measurements: List of measurements.
+    :type measurements: Union(list[str], tuple[str])
+    :param date_range: Start and end dates.
+    :type date_range: Union(list[str], tuple[str])
+    :param extent: Query extent (xmin, ymin, xmax, ymax).
+    :type extent: Union(list[float], tuple[float])
+    :param str query_crs: Query CRS.
+    :param str output_crs: Output CRS or None.
+    :param float output_res: Output resolution or None.
+    :param str config: Datacube config filepath or None.
+    :param dict dask_chunks: Dask chunks.
+
+    :return: Data.
+    :rtype: xarray.Dataset
+
+    :raise NoDataError: No data found for query
+
+    """
 
     dc = datacube.Datacube(config=config, app='QGIS Plugin')
 
@@ -172,13 +228,30 @@ def run_query(product, measurements, date_range, extent, query_crs,
 
 
 def str_snip(str_to_snip, max_len, suffix='...'):
+    """
+    Shorten a string to a certain length and add a suffix.
+
+    :param str str_to_snip: String to snip.
+    :param int max_len: Maximum length of returned string.
+    :param suffix: Suffix to append to returned string after it has been snipped.
+    :return:  Snipped string
+    :rtype: str
+    """
     snip_len = max_len - len(suffix)
     snipped = str_to_snip if len(str_to_snip) <= max_len else str_to_snip[:snip_len]+suffix
     return snipped
 
 
 def upcast(dataset, old_dtype):
-    """ Upcast to next dtype of same kind, i.e. from int to int16 """
+    """
+    Upcast to next dtype of same kind, i.e. from int to int16
+
+    :param xarray.Dataset dataset: Dataset to cast.
+    :param old_dtype: Data type object or string.
+    :type old_dtype: Union(numpy.dtype, str)
+    :return: Tuple of upcast Dataset and new dtype
+    :rtype: tuple(xarray.Dataset, numpy.dtype)
+    """
 
     old_dtype = np.dtype(old_dtype)  # Ensure old dtype is an np.dtype instance (i.e. not a string)
     dtype = np.dtype(old_dtype.kind + str(old_dtype.itemsize * 2))
@@ -198,9 +271,17 @@ def upcast(dataset, old_dtype):
     return dataset, dtype
 
 
-def update_tags(filename, bidx=0, ns=None, **kwargs):
+def update_tags(filename, bidx=0, ns=None, **tags):
+    """
+    Update raster metadata tags.
+
+    :param str filename: Raster to update.
+    :param bidx: Index of band to be updated.
+    :param str ns: Namespace
+    :param dict tags: tags to update
+    """
     with rio.open(filename, 'r+') as raster:
-        raster.update_tags(bidx=bidx, ns=ns, **kwargs)
+        raster.update_tags(bidx=bidx, ns=ns, **tags)
 
 
 def write_geotiff(filename, dataset, time_index=None, profile_override=None, overwrite=False):
@@ -210,13 +291,18 @@ def write_geotiff(filename, dataset, time_index=None, profile_override=None, ove
             - dask lazy arrays,
             - arrays with no time dimension
             - Nodata values
+            - Small rasters (row or cols < blocksize)
+            - Nodata values
+            - dtype checks and upcasting
+            - existing output checks
         https://github.com/opendatacube/datacube-core/blob/develop/datacube/helpers.py
         Original code licensed under the Apache License, Version 2.0 (the "License");
 
-    :param filename: Output filename
-    :attr dataset: xarray dataset containing multiple bands to write to file
-    :attr time_index: time index to write to file
-    :attr profile_override: option dict, overrides rasterio file creation options.
+    :param str filename: Output filename
+    :param xarray.Dataset dataset: xarray dataset containing multiple bands to write to file
+    :param int time_index: time index to write to file
+    :param dict profile_override: option dict, overrides rasterio file creation options.
+    :param bool overwrite: Allow overwriting existing files.
 
     """
 
@@ -240,7 +326,7 @@ def write_geotiff(filename, dataset, time_index=None, profile_override=None, ove
     profile.update({
         'width': dimx,
         'height': dimy,
-        'affine': dataset.affine,
+        'transform': dataset.affine,
         'crs': dataset.crs.crs_str,
         'count': len(dataset.data_vars),
         'dtype': str(dtype)
@@ -273,7 +359,17 @@ def write_geotiff(filename, dataset, time_index=None, profile_override=None, ove
 
             dest.write(data, bandnum)
 
+
 def write_netcdf(dataset, filename, overwrite=False, *args, **kwargs):
+    """
+    Write an xarray dataset to a NetCDF
+
+    :param str filename: Output filename
+    :param xarray.Dataset dataset: xarray dataset containing multiple bands to write to file
+    :param bool overwrite: Allow overwriting existing files.
+    :param **args: Positional arguments to pass to datacube.storage.storage.write_dataset_to_netcdf.
+    :param **kwargs: Keyword arguments to pass to datacube.storage.storage.write_dataset_to_netcdf.
+    """
     filepath = Path(filename)
 
     if filepath.exists() and overwrite:
