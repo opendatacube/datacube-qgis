@@ -20,7 +20,8 @@ class ParameterDateRange(QgsProcessingParameterString):
         return 'date_range'
 
     def set_data(self, data):
-        for wrapper in list(self.wrappers.values()):
+        # noinspection PyUnresolvedReferences
+        for wrapper in list(self.wrappers.values()):  # self.wrappers set by super class
             wrapper.setValue(data)
 
 class ParameterProducts(QgsProcessingParameterString):
@@ -46,6 +47,7 @@ class ParameterProducts(QgsProcessingParameterString):
         return 'product_measurements'
 
     def set_data(self, data):
-        for wrapper in list(self.wrappers.values()):
+        # noinspection PyUnresolvedReferences
+        for wrapper in list(self.wrappers.values()):  # self.wrappers set by super class
             wrapper.setValue(data)
 

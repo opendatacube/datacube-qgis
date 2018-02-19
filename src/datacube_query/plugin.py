@@ -26,6 +26,7 @@ from qgis.core import QgsApplication
 from .provider import DataCubeQueryProvider
 from .qgisutils import get_icon
 
+
 class DataCubeQueryPlugin:
 
     def __init__(self, iface):
@@ -33,10 +34,12 @@ class DataCubeQueryPlugin:
         # TODO figure out why a duplicate provider is registered
         self.provider = DataCubeQueryProvider()
 
-    def initGui(self):  #pylint: disable=
+    def initGui(self):
+        # noinspection PyArgumentList
         QgsApplication.processingRegistry().addProvider(self.provider)
 
     def unload(self):
+        # noinspection PyArgumentList
         QgsApplication.processingRegistry().removeProvider(self.provider)
 
     def getIcon(self):

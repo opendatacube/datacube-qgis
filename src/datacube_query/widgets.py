@@ -1,5 +1,4 @@
 from collections import defaultdict
-import os
 import json
 from pathlib import Path
 
@@ -88,6 +87,7 @@ class WidgetProducts(BASE_PRODUCT, WIDGET_PRODUCT):
     def get_items(self, flags=QTreeWidgetItemIterator.All):
         """ Returns an iterator over the tree items. """
 
+        # noinspection PyTypeChecker
         twit = QTreeWidgetItemIterator(self.tree_products, flags)
 
         while twit.value() is not None: #This 'orrible iteration style offends me greatly
@@ -118,10 +118,12 @@ class WidgetProducts(BASE_PRODUCT, WIDGET_PRODUCT):
         for product, measurements in self._data.items():
             parent = QTreeWidgetItem(self.tree_products)
             parent.setText(0, product)
+            # noinspection PyTypeChecker
             parent.setFlags(parent.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
 
             for measurement in measurements:
                 child = QTreeWidgetItem(parent)
+                # noinspection PyTypeChecker
                 child.setFlags(child.flags() | Qt.ItemIsUserCheckable)
                 child.setText(0, measurement)
                 child.setCheckState(0, Qt.Unchecked)

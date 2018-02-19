@@ -1,5 +1,5 @@
 from collections import defaultdict
-from datetime import date
+from datetime import datetime
 
 import dask.array
 import numpy as np
@@ -21,7 +21,7 @@ from .exceptions import NoDataError
 __revision__ = '$Format:%H$'
 
 
-def build_overviews(filename, overview_options):
+def build_overviews(filename, overview_options=None):
     """
     Build reduced resolution overviews/pyramids for a raster
 
@@ -114,7 +114,7 @@ def datetime_to_str(datetime64, str_format='%Y-%m-%d'):
     # datetime64 has nanosecond resolution so convert to millisecs
     dt = datetime64.astype(np.int64) // 1000000000
 
-    dt = date.fromtimestamp(dt)
+    dt = datetime.utcfromtimestamp(dt)
     return dt.strftime(str_format)
 
 
@@ -151,14 +151,14 @@ def get_products_and_measurements(config=None):
 
     dc = datacube.Datacube(config=config)
     products = dc.list_products()
-    # products = products[~products['name'].str.contains("archived")] #TODO this is a kludge/workaround
+    # products = products[~products['name'].str.contains("archived")]  # TODO this is a kludge/workaround
     measurements = dc.list_measurements()
     measurements.reset_index(inplace=True)
     display_columns = ['name', 'description']
     products = products[display_columns]
     display_columns = ['measurement', 'aliases', 'product']
     measurements = measurements[display_columns]
-    # measurements = measurements[~measurements['product'].str.contains('archived')] #TODO this is a kludge/workaround
+    # measurements = measurements[~measurements['product'].str.contains('archived')] # TODO this is a kludge/workaround
 
     products.set_index(['name'], inplace=True, drop=False)
     measurements.set_index(['product'], inplace=True, drop=False)
@@ -167,9 +167,7 @@ def get_products_and_measurements(config=None):
     prodmeas['meas_desc'] = prodmeas[['measurement', 'aliases']].apply(lambda x: measurement_desc(*x), axis=1)
 
     for row in prodmeas.itertuples():
-        # Description is not unique
-        # proddict[row.description]['product'] = row.product
-        # proddict[row.description]['measurements'][row.meas_desc] = row.measurement
+        # TODO - what if description is NA
         description = '{} ({})'.format(row.description, row.name)
         proddict[description]['product'] = row.product
         proddict[description]['measurements'][row.meas_desc] = row.measurement
@@ -231,6 +229,7 @@ def run_query(query, config=None):
 
     """
 
+    # noinspection PyTypeChecker
     dc = datacube.Datacube(config=config, app='QGIS Plugin')
 
     test_query = {k: query[k] for k in ('product', 'time', 'x', 'y', 'crs')}

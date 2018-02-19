@@ -24,7 +24,7 @@ __revision__ = '$Format:%H$'
 
 import json
 
-from qgis.core import QgsApplication, QgsProcessingProvider
+from qgis.core import QgsProcessingProvider
 from processing.core.ProcessingConfig import ProcessingConfig, Setting
 
 from .algs.query import DataCubeQueryAlgorithm
@@ -41,12 +41,14 @@ class DataCubeQueryProvider(QgsProcessingProvider):
 
     def __init__(self):
         super().__init__()
-        self.algs = [DataCubeQueryAlgorithm]
-
-    def load(self):
 
         # Activate provider by default
         self.activate = True
+
+        self.algs = [DataCubeQueryAlgorithm]
+        self.settings = []
+
+    def load(self):
 
         self.settings = [
             Setting(SETTINGS_GROUP,

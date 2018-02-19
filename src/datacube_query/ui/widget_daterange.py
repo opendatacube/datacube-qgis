@@ -1,9 +1,10 @@
 __all__ = ['WIDGET_DATE_RANGE','BASE_DATE_RANGE']
 
-from qgis.PyQt import QtCore, QtGui, QtWidgets
+from qgis.PyQt import QtCore, QtWidgets
 from qgis import gui
 
 class Ui_Form(object):
+    # noinspection PyAttributeOutsideInit
     def setupUi(self, Form):
         Form.setObjectName("Form")
         Form.resize(400, 67)

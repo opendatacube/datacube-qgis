@@ -176,6 +176,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
                 layer, QgsProcessingContext.LayerDetails(layer_name, context.project()))
         return {} #Avoid NoneType can not be converted to a QMap instance
 
+    # noinspection PyMethodOverriding
     def processAlgorithm(self, parameters, context, feedback):
         """
         Collect parameters and execute the query
@@ -234,6 +235,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         self.outputs = output_layers # This is used in postProcessAlgorithm
         return results
 
+    # noinspection PyTypeChecker
     def execute(self,
                 products, date_range, extent, extent_crs,
                 output_crs, output_res, output_netcdf, output_folder,
@@ -288,19 +290,25 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
             else:
                 for i, dt in enumerate(data.time):
-                    ds = datetime_to_str(dt)
+                    if group_by is None:
+                        ds = datetime_to_str(dt, '%Y-%m-%d_%H-%M-%S')
+                        tag = datetime_to_str(dt, '%Y:%m:%d %H:%M:%S')
+                    else:
+                        ds = datetime_to_str(dt)
+                        tag = datetime_to_str(dt, '%Y:%m:%d')
+
                     raster_path = basepath.format(ds) + '.tif'
 
                     write_geotiff(raster_path, data, time_index=i,
                                   profile_override=gtiff_options, overwrite=True)
 
-                    update_tags(raster_path, TIFFTAG_DATETIME=datetime_to_str(dt, '%Y:%m:%d %H:%M:%S'))
+                    update_tags(raster_path, TIFFTAG_DATETIME=tag)
 
                     if overviews:
                         build_overviews(raster_path, gtiff_ovr_options)
 
                     lyr_name = basename.format(ds)
-                    output_layers[raster_path]=lyr_name
+                    output_layers[raster_path] = lyr_name
 
                     feedback.setProgress(int((idx * 10 + i + 1) * progress_total))
 

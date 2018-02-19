@@ -49,7 +49,6 @@ GTIFF_DEFAULTS = {"driver": "GTiff",
                   'photometric': 'RGBA',
                   }
 
-
 GTIFF_OVR_DEFAULTS = {'resampling': 'average',
                       'factors': [2, 4, 8, 16, 32],
                       'internal_storage': True}
