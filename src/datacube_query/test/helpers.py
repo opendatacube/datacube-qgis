@@ -8,7 +8,8 @@ def data_path():
 
 
 @contextmanager
-def shut_gdal_up():  # Turn off stderr spam
+def shut_gdal_up():
+    """ Turn off stderr spam """
     gdal.PushErrorHandler('CPLQuietErrorHandler')
     yield
     gdal.PopErrorHandler()
