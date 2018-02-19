@@ -1,3 +1,6 @@
+from collections import OrderedDict
+from datacube.helpers import ga_pq_fuser
+
 # TODO Disabling rasterio enums (for now).
 # Having this enabled segfaults QGIS 2.99dev (3.0) when the "Select CRS" button
 # in _any_ processing alg. dialog (even core) is clicked.
@@ -50,3 +53,8 @@ GTIFF_DEFAULTS = {"driver": "GTiff",
 GTIFF_OVR_DEFAULTS = {'resampling': 'average',
                       'factors': [2, 4, 8, 16, 32],
                       'internal_storage': True}
+
+GROUP_BY_FUSE_FUNC = OrderedDict([
+    ('Solar Day', ('solar_day', None)),
+    ('Solar Day (GA PQ Fuser)', ('solar_day', ga_pq_fuser)),
+    ('Don\'t group', (None, None))])  #defaults to 'time' in datacube-core

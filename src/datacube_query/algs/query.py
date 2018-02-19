@@ -15,6 +15,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from processing.core.parameters import (
     QgsProcessingParameterBoolean as ParameterBoolean,
     QgsProcessingParameterCrs as ParameterCrs,
+    QgsProcessingParameterEnum as ParameterEnum,
     QgsProcessingParameterExtent as ParameterExtent,
     QgsProcessingParameterNumber as ParameterNumber,
     QgsProcessingParameterFolderDestination as ParameterFolderDestination)
@@ -28,11 +29,13 @@ from qgis.core import (
     QgsProcessingException)
 
 from .base import BaseAlgorithm
+from ..defaults import GROUP_BY_FUSE_FUNC
 from ..exceptions import NoDataError
 from ..parameters import (ParameterDateRange, ParameterProducts)
 from ..qgisutils import (get_icon)
 from ..utils import (
     build_overviews,
+    build_query,
     datetime_to_str,
     get_products_and_measurements,
     run_query,
@@ -65,6 +68,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
     PARAM_OUTPUT_CRS = 'Output CRS (required for products with no CRS defined)'
     PARAM_OUTPUT_RESOLUTION = ('Output pixel resolution '
                                '(required for products with no resolution defined)')
+    PARAM_GROUP_BY = 'Group data by'
 
     # TODO error handling with QgsProcessingException
 
@@ -144,6 +148,10 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
                                 type=ParameterNumber.Double, optional=True, defaultValue=None)
         self.addParameter(param)
 
+        param = ParameterEnum(self.PARAM_GROUP_BY, self.tr(self.PARAM_GROUP_BY), allowMultiple=False,
+                              options=GROUP_BY_FUSE_FUNC.keys(), defaultValue=0)
+        self.addParameter(param)
+
         # Output/s
         self.addParameter(ParameterFolderDestination(self.OUTPUT_FOLDER,
                                                      self.tr(self.OUTPUT_FOLDER)),
@@ -178,10 +186,6 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         :return:
         """
 
-        self.feedback = feedback
-        self.context = context
-        self.project = context.project()
-
         # General options
         settings = self.get_settings()
         config_file = settings['datacube_config_file'] or None
@@ -213,6 +217,9 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         output_res = self.parameterAsDouble(parameters, self.PARAM_OUTPUT_RESOLUTION, context)
         output_res = None if not output_res else [output_res, output_res]
 
+        group_by = self.parameterAsEnum(parameters, self.PARAM_GROUP_BY, context)
+        group_by, fuse_func = GROUP_BY_FUSE_FUNC[list(GROUP_BY_FUSE_FUNC.keys())[group_by]]
+
         output_folder = self.parameterAsString(parameters, self.OUTPUT_FOLDER, context)
 
         dask_chunks = {'time': 1}
@@ -220,17 +227,18 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         output_layers = self.execute(
             products, date_range, extent, extent_crs,
             output_crs, output_res, output_netcdf, output_folder,
-            config_file, dask_chunks, overviews,
-            gtiff_options, gtiff_ovr_options, feedback)
+            config_file, dask_chunks, overviews, gtiff_options, gtiff_ovr_options,
+            group_by, fuse_func, feedback)
 
         results = {self.OUTPUT_FOLDER: output_folder, self.OUTPUT_LAYERS: output_layers.keys()}
         self.outputs = output_layers # This is used in postProcessAlgorithm
         return results
 
-    def execute(self, products, date_range, extent, extent_crs,
+    def execute(self,
+                products, date_range, extent, extent_crs,
                 output_crs, output_res, output_netcdf, output_folder,
-                config_file, dask_chunks, overviews,
-                gtiff_options, gtiff_ovr_options, feedback):
+                config_file, dask_chunks, overviews, gtiff_options, gtiff_ovr_options,
+                group_by, fuse_func, feedback):
 
         output_layers = {}
         progress_total = 100 / (10*len(products))
@@ -244,11 +252,16 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
             feedback.setProgressText('Processing {}'.format(product))
 
             try:
-                data = run_query(product, measurements,
-                                 date_range, extent,
-                                 extent_crs, output_crs,
-                                 output_res, config_file,
-                                 dask_chunks=dask_chunks)
+                query = build_query(
+                    product, measurements,
+                    date_range, extent,
+                    extent_crs, output_crs,
+                    output_res, dask_chunks=dask_chunks,
+                    group_by=group_by, fuse_func=fuse_func)
+
+                feedback.setProgressText('Query {}'.format(repr(query)))
+
+                data = run_query(query, config_file)
 
             except NoDataError as err:
                 feedback.pushInfo('{}'.format(err))

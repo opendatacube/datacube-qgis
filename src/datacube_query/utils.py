@@ -57,6 +57,48 @@ def build_overviews(filename, overview_options):
         raster.update_tags(ns='rio_overview', resampling=options['resampling'])
 
 
+def build_query(product, measurements, date_range, extent, query_crs,
+              output_crs=None, output_res=None, dask_chunks=None, group_by=None, fuse_func=None):
+    """
+    Build a datacube query
+
+    :param str product: Product name.
+    :param measurements: List of measurements.
+    :type measurements: Union(list[str], tuple[str])
+    :param date_range: Start and end dates.
+    :type date_range: Union(list[str], tuple[str])
+    :param extent: Query extent (xmin, ymin, xmax, ymax).
+    :type extent: Union(list[float], tuple[float])
+    :param str query_crs: Query CRS.
+    :param str output_crs: Output CRS or None.
+    :param float output_res: Output resolution or None.
+    :param dict dask_chunks: Dask chunks.
+    :param str group_by: Group data by (time/solar_day).
+    :param callable fuse_func: Fuser function for grouped data.
+
+    :return: Query.
+    :rtype: dict
+    """
+
+    xmin, ymin, xmax, ymax = extent
+    query = dict(product=product, measurements=measurements,
+                 x=(xmin, xmax), y=(ymin, ymax),
+                 time=date_range, crs=str(query_crs))
+
+    if dask_chunks is not None:
+        query['dask_chunks'] = dask_chunks
+    if group_by is not None:
+        query['group_by'] = group_by
+    if fuse_func is not None:
+        query['fuse_func'] = fuse_func
+    if output_crs is not None:
+        query['output_crs'] = str(output_crs)
+    if output_res is not None:
+        query['resolution'] = output_res
+
+    return query
+
+
 def datetime_to_str(datetime64, str_format='%Y-%m-%d'):
     """
     Convert a numpy.datetime64 to a string
@@ -174,23 +216,12 @@ def measurement_desc(measurement, aliases):
     return '{} ({})'.format(measurement, '/'.join(aliases))
 
 
-def run_query(product, measurements, date_range, extent, query_crs,
-              output_crs=None, output_res=None, config=None, dask_chunks=None):
+def run_query(query, config=None):
     """
-    Build a query, load and return the data.
+    Load and return the data.
 
-    :param str product: Product name.
-    :param measurements: List of measurements.
-    :type measurements: Union(list[str], tuple[str])
-    :param date_range: Start and end dates.
-    :type date_range: Union(list[str], tuple[str])
-    :param extent: Query extent (xmin, ymin, xmax, ymax).
-    :type extent: Union(list[float], tuple[float])
-    :param str query_crs: Query CRS.
-    :param str output_crs: Output CRS or None.
-    :param float output_res: Output resolution or None.
+    :param dict query: Query.
     :param str config: Datacube config filepath or None.
-    :param dict dask_chunks: Dask chunks.
 
     :return: Data.
     :rtype: xarray.Dataset
@@ -201,20 +232,9 @@ def run_query(product, measurements, date_range, extent, query_crs,
 
     dc = datacube.Datacube(config=config, app='QGIS Plugin')
 
-    xmin, ymin, xmax, ymax = extent
-    query = dict(product=product, x=(xmin, xmax), y=(ymin, ymax), time=date_range, crs=str(query_crs))
-
-    query_obj = datacube.api.query.Query(**query)
-
-    datasets = dc.index.datasets.search_eager(**query_obj.search_terms)
-
-    query['measurements'] = measurements
-    query['dask_chunks'] = dask_chunks
-    query['group_by'] = 'solar_day'
-    if output_crs is not None:
-        query['output_crs'] = str(output_crs)
-    if output_res is not None:
-        query['resolution'] = output_res
+    test_query = {k: query[k] for k in ('product', 'time','x', 'y', 'crs')}
+    test_query = datacube.api.query.Query(**test_query)
+    datasets = dc.index.datasets.search_eager(**test_query.search_terms)
 
     if not datasets:
         raise NoDataError('No datasets found for query:\n{}'.format(str(query)))
