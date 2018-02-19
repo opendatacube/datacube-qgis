@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch
-from .fixtures import data_path
+from .fixtures import data_path, shut_gdal_up
 
 import tempfile
 import shutil
@@ -8,6 +8,7 @@ from pathlib import Path
 
 import datacube
 import numpy as np
+from osgeo import gdal
 import rasterio as rio
 import xarray
 
@@ -93,7 +94,6 @@ def test_run_query_with_data(mock_datacube):
              'x': (19680402.0, 19680205.0), 'y': (-19680205.0, -19680402.0),
              'time': ['2001-01-01', '2001-12-31'], 'crs': 'EPSG:4283'}
 
-
     assert mock_dataset.identical(datacube_query.utils.run_query(query))
 
 
@@ -103,5 +103,5 @@ def test_run_query_with_dodgy_crs(mock_datacube):
              'x': (19680402.0, 19680205.0), 'y': (-19680205.0, -19680402.0),
              'time': ['2001-01-01', '2001-12-31'], 'crs': 'EPSG:9000'}
 
-    with pytest.raises(datacube.utils.geometry.InvalidCRSError):
+    with pytest.raises(datacube.utils.geometry.InvalidCRSError), shut_gdal_up():
         datacube_query.utils.run_query(query)
