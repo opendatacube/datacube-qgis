@@ -9,11 +9,10 @@ import rasterio as rio
 from rasterio.dtypes import check_dtype
 
 import datacube
-import datacube.api
+from datacube.api.query import Query
 from datacube.storage.storage import write_dataset_to_netcdf as _write_dataset_to_netcdf
 
 from .defaults import (GTIFF_OVR_DEFAULTS,
-                       GTIFF_COMPRESSION,
                        GTIFF_DEFAULTS,
                        GTIFF_OVR_RESAMPLING)
 from .exceptions import NoDataError
@@ -57,8 +56,10 @@ def build_overviews(filename, overview_options):
         raster.update_tags(ns='rio_overview', resampling=options['resampling'])
 
 
-def build_query(product, measurements, date_range, extent, query_crs,
-              output_crs=None, output_res=None, dask_chunks=None, group_by=None, fuse_func=None):
+def build_query(
+        product, measurements, date_range, extent,
+        query_crs, output_crs=None, output_res=None,
+        dask_chunks=None, group_by=None, fuse_func=None):
     """
     Build a datacube query
 
@@ -146,7 +147,7 @@ def get_products_and_measurements(config=None):
         where: measurement_description is derived from measurement name and alias attributes
     """
 
-    proddict = defaultdict(lambda : defaultdict(dict))
+    proddict = defaultdict(lambda: defaultdict(dict))
 
     dc = datacube.Datacube(config=config)
     products = dc.list_products()
@@ -173,7 +174,6 @@ def get_products_and_measurements(config=None):
         proddict[description]['product'] = row.product
         proddict[description]['measurements'][row.meas_desc] = row.measurement
 
-
     return proddict
 
 
@@ -194,6 +194,7 @@ def lcase_dict(adict):
 
     return ret_dict
 
+
 def measurement_desc(measurement, aliases):
     """
     Generate measurement descriptions from measurement name and aliases.
@@ -206,13 +207,13 @@ def measurement_desc(measurement, aliases):
     try:
         if pd.isnull(aliases):
             return measurement
-    except ValueError: #Got a list
+    except ValueError:  # Got a list
         pass
 
-    if measurement in aliases: #Assumes a list...
+    if measurement in aliases:  # Assumes a list...
         del aliases[aliases.index(measurement)]
 
-    #return '/'.join([measurement]+aliases) #Assumes a list...
+    # return '/'.join([measurement]+aliases) #Assumes a list...
     return '{} ({})'.format(measurement, '/'.join(aliases))
 
 
@@ -232,8 +233,8 @@ def run_query(query, config=None):
 
     dc = datacube.Datacube(config=config, app='QGIS Plugin')
 
-    test_query = {k: query[k] for k in ('product', 'time','x', 'y', 'crs')}
-    test_query = datacube.api.query.Query(**test_query)
+    test_query = {k: query[k] for k in ('product', 'time', 'x', 'y', 'crs')}
+    test_query = Query(**test_query)
     datasets = dc.index.datasets.search_eager(**test_query.search_terms)
 
     if not datasets:
@@ -281,7 +282,7 @@ def upcast(dataset, old_dtype):
     datavar_attrs = {var: val.attrs for var, val in dataset.data_vars.items()}
 
     # Upcast
-    dataset = dataset.astype(dtype) # loses attrs
+    dataset = dataset.astype(dtype)  # loses attrs
 
     # Re-add attrs
     dataset.attrs.update(**dataset_attrs)
@@ -387,8 +388,8 @@ def write_netcdf(dataset, filename, overwrite=False, *args, **kwargs):
     :param str filename: Output filename
     :param xarray.Dataset dataset: xarray dataset containing multiple bands to write to file
     :param bool overwrite: Allow overwriting existing files.
-    :param **args: Positional arguments to pass to datacube.storage.storage.write_dataset_to_netcdf.
-    :param **kwargs: Keyword arguments to pass to datacube.storage.storage.write_dataset_to_netcdf.
+    :param args: Positional arguments to pass to datacube.storage.storage.write_dataset_to_netcdf.
+    :param kwargs: Keyword arguments to pass to datacube.storage.storage.write_dataset_to_netcdf.
     """
     filepath = Path(filename)
 
