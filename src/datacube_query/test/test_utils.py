@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch
-from .fixtures import data_path, shut_gdal_up
+from .utils import data_path, shut_gdal_up
 
 import tempfile
 import shutil
