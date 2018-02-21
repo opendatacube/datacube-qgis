@@ -111,8 +111,8 @@ def datetime_to_str(datetime64, str_format='%Y-%m-%d'):
 
     """
 
-    # datetime64 has nanosecond resolution so convert to millisecs
-    dt = datetime64.astype(np.int64) // 1000000000
+    # datetime64 has nanosecond resolution so convert to seconds
+    dt = datetime64.astype('datetime64[s]').astype(np.uint64)
 
     dt = datetime.utcfromtimestamp(dt)
     return dt.strftime(str_format)
