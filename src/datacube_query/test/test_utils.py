@@ -36,6 +36,7 @@ def test_build_query():
                    'x': (19680402.0, 19680205.0), 'y': (-19680205.0, -19680402.0),
                    'time': ['2001-01-01', '2001-12-31'], 'crs': 'EPSG:9000'}
     extent = [c for xy in zip(known_query['x'],known_query['y']) for c in xy]
+
     test_query = datacube_query.utils.build_query(known_query['product'], known_query['measurements'],
                                                   known_query['time'], extent, known_query['crs'])
 
@@ -43,10 +44,26 @@ def test_build_query():
 
 
 def test_datetime_to_str():
-    dt64 = np.datetime64('2001-12-31T01:23:45.0000000')
-    assert datacube_query.utils.datetime_to_str(dt64) == '2001-12-31'
-    assert datacube_query.utils.datetime_to_str(dt64, '%Y-%m-%d_%H-%M-%S') == '2001-12-31_01-23-45'
-    assert datacube_query.utils.datetime_to_str(dt64, '%Y:%m:%d %H:%M:%S') == '2001:12:31 01:23:45'
+    # Nanosec res
+    dtns = np.datetime64('2001-12-31T01:23:45.0000000')
+    assert datacube_query.utils.datetime_to_str(dtns) == '2001-12-31'
+    assert datacube_query.utils.datetime_to_str(dtns, '%Y-%m-%d_%H-%M-%S') == '2001-12-31_01-23-45'
+
+    # Microsec res
+    dtus = np.datetime64('2001-12-31T01:23:45.0000')
+    assert datacube_query.utils.datetime_to_str(dtus) == '2001-12-31'
+    assert datacube_query.utils.datetime_to_str(dtus, '%Y-%m-%d_%H-%M-%S') == '2001-12-31_01-23-45'
+
+    # Millisec res
+    dtms = np.datetime64('2001-12-31T01:23:45.0')
+    assert datacube_query.utils.datetime_to_str(dtms) == '2001-12-31'
+    assert datacube_query.utils.datetime_to_str(dtms, '%Y-%m-%d_%H-%M-%S') == '2001-12-31_01-23-45'
+
+    # Sec res
+    dtms = np.datetime64('2001-12-31T01:23:45')
+    assert datacube_query.utils.datetime_to_str(dtms) == '2001-12-31'
+    assert datacube_query.utils.datetime_to_str(dtms, '%Y-%m-%d_%H-%M-%S') == '2001-12-31_01-23-45'
+
     with pytest.raises(OverflowError):
         bad_dt64 = np.datetime64('1969-12-31T11:59:59')  # Must be >= 1970
         datacube_query.utils.datetime_to_str(bad_dt64)
@@ -101,6 +118,12 @@ def test_get_products_and_measurements(mock_datacube):
     mock_datacube().list_measurements.return_value = pd.DataFrame(df_measurements_without_aliases)
     test_without_aliases = datacube_query.utils.get_products_and_measurements()
     assert test_without_aliases == expected_without_aliases
+
+
+def test_lcase_dict():
+    test_dict = {'A': 0, 'B': 0, 'c': 0, 'DeFg': 0, (1,2,3): 0, 4: 0}
+    expected__dict = {'a': 0, 'b': 0, 'c': 0, 'defg': 0, (1,2,3): 0, 4: 0}
+    assert datacube_query.utils.lcase_dict(test_dict) == expected__dict
 
 
 @patch('datacube.Datacube')
