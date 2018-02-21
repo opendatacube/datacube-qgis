@@ -275,8 +275,8 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
             feedback.setProgressText('Saving outputs for {}'.format(product))
             if output_netcdf:
-                start_date = datetime_to_str(data.time[0])
-                end_date = datetime_to_str(data.time[-1])
+                start_date = datetime_to_str(data.time[0].data)
+                end_date = datetime_to_str(data.time[-1].data)
                 dt = '{}_{}'.format(start_date, end_date)
                 raster_path = basepath.format(dt) + '.nc'
                 write_netcdf(data, raster_path, overwrite=True)
