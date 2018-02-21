@@ -111,7 +111,8 @@ def datetime_to_str(datetime64, str_format='%Y-%m-%d'):
 
     """
 
-    # datetime64 has nanosecond resolution so convert to seconds
+    # datetime64 can have various resolutions (inc. pico, femto and atto!)
+    # so convert to seconds
     dt = datetime64.astype('datetime64[s]').astype(np.uint64)
 
     dt = datetime.utcfromtimestamp(dt)
@@ -187,7 +188,7 @@ def lcase_dict(adict):
     for k, v in adict.items():
         try:
             ret_dict[k.lower()] = v
-        except TypeError:
+        except (TypeError, AttributeError):
             ret_dict[k] = v
 
     return ret_dict
