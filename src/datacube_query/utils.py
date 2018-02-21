@@ -194,7 +194,7 @@ def lcase_dict(adict):
     return ret_dict
 
 
-def measurement_desc(measurement, aliases):
+def measurement_desc(measurement, aliases, brackets=False):
     """
     Generate measurement descriptions from measurement name and aliases.
 
@@ -212,8 +212,10 @@ def measurement_desc(measurement, aliases):
     if measurement in aliases:  # Assumes a list...
         del aliases[aliases.index(measurement)]
 
-    # return '/'.join([measurement]+aliases) #Assumes a list...
-    return '{} ({})'.format(measurement, '/'.join(aliases))
+    if brackets:
+        return '{} ({})'.format(measurement, '/'.join(aliases))
+    else:
+        return '/'.join([measurement]+aliases) #Assumes a list...
 
 
 def run_query(query, config=None):

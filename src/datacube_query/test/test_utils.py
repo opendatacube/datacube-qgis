@@ -94,7 +94,7 @@ def test_get_products_and_measurements(mock_datacube):
 
     expected_with_aliases = {'Some Dataset (some_dataset)': {
         'product': 'some_dataset',
-        'measurements': {'some_data (foo/bar)': 'some_data'}}}
+        'measurements': {'some_data/foo/bar': 'some_data'}}}
     expected_without_aliases = {'Some Dataset (some_dataset)': {
         'product': 'some_dataset',
         'measurements': {'some_data': 'some_data'}}}
@@ -124,6 +124,17 @@ def test_lcase_dict():
     test_dict = {'A': 0, 'B': 0, 'c': 0, 'DeFg': 0, (1,2,3): 0, 4: 0}
     expected__dict = {'a': 0, 'b': 0, 'c': 0, 'defg': 0, (1,2,3): 0, 4: 0}
     assert datacube_query.utils.lcase_dict(test_dict) == expected__dict
+
+
+def test_measurement_desc():
+    measurement = 'abc'
+    nan_aliases = np.nan
+    list_aliases = ['def', 'ghi']
+
+    assert datacube_query.utils.measurement_desc(measurement, nan_aliases) == 'abc'
+    assert datacube_query.utils.measurement_desc(measurement, list_aliases) == 'abc/def/ghi'
+    assert datacube_query.utils.measurement_desc(measurement, nan_aliases, True) == 'abc'
+    assert datacube_query.utils.measurement_desc(measurement, list_aliases, True) == 'abc (def/ghi)'
 
 
 @patch('datacube.Datacube')
