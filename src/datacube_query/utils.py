@@ -215,7 +215,7 @@ def measurement_desc(measurement, aliases, brackets=False):
     if brackets:
         return '{} ({})'.format(measurement, '/'.join(aliases))
     else:
-        return '/'.join([measurement]+aliases) #Assumes a list...
+        return '/'.join([measurement]+aliases)  # Assumes a list...
 
 
 def run_query(query, config=None):
@@ -248,21 +248,6 @@ def run_query(query, config=None):
         raise NoDataError('No data found for query:\n{}'.format(str(query)))
 
     return data
-
-
-def str_snip(str_to_snip, max_len, suffix='...'):
-    """
-    Shorten a string to a certain length and add a suffix.
-
-    :param str str_to_snip: String to snip.
-    :param int max_len: Maximum length of returned string.
-    :param suffix: Suffix to append to returned string after it has been snipped.
-    :return:  Snipped string
-    :rtype: str
-    """
-    snip_len = max_len - len(suffix)
-    snipped = str_to_snip if len(str_to_snip) <= max_len else str_to_snip[:snip_len]+suffix
-    return snipped
 
 
 def upcast(dataset, old_dtype):
