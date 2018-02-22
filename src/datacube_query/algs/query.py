@@ -225,7 +225,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
         output_folder = self.parameterAsString(parameters, self.OUTPUT_FOLDER, context)
 
-        dask_chunks = {'time': 1}
+        dask_chunks = {'time': 1} if date_range is not None else None
 
         output_layers = self.execute(
             products, date_range, extent, extent_crs,

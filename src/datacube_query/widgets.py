@@ -57,11 +57,18 @@ class WidgetDateRange(BASE_DATE_RANGE, WIDGET_DATE_RANGE):
         data = data if data else {}
         data = json.loads(data) if isinstance(data, str) else data
 
-        self.date_start.setDate(QDate.fromString(data[0], self._dateformat))
-        self.date_end.setDate(QDate.fromString(data[1], self._dateformat))
+        if data is None:
+            self.date_start.clear()
+            self.date_end.clear()
 
-        self._start = data[0]
-        self._end = data[1]
+            self._start = None
+            self._end = None
+        else:
+            self.date_start.setDate(QDate.fromString(data[0], self._dateformat))
+            self.date_end.setDate(QDate.fromString(data[1], self._dateformat))
+
+            self._start = data[0]
+            self._end = data[1]
 
     def update_start(self, qdatetime):
         self._start = qdatetime.toString(self._dateformat)
@@ -70,7 +77,8 @@ class WidgetDateRange(BASE_DATE_RANGE, WIDGET_DATE_RANGE):
         self._end = qdatetime.toString(self._dateformat)
 
     def value(self):
-        return json.dumps([self._start, self._end])
+        retval = [self._start, self._end] if (self._start and self._end) else None
+        return json.dumps(retval)
 
 
 class WidgetProducts(BASE_PRODUCT, WIDGET_PRODUCT):

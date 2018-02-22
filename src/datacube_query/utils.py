@@ -67,7 +67,7 @@ def build_query(
     :param measurements: List of measurements.
     :type measurements: Union(list[str], tuple[str])
     :param date_range: Start and end dates.
-    :type date_range: Union(list[str], tuple[str])
+    :type date_range: Union(list[str], tuple[str], None)
     :param extent: Query extent (xmin, ymin, xmax, ymax).
     :type extent: Union(list[float], tuple[float])
     :param str query_crs: Query CRS.
@@ -83,9 +83,10 @@ def build_query(
 
     xmin, ymin, xmax, ymax = extent
     query = dict(product=product, measurements=measurements,
-                 x=(xmin, xmax), y=(ymin, ymax),
-                 time=date_range, crs=str(query_crs))
+                 x=(xmin, xmax), y=(ymin, ymax), crs=str(query_crs))
 
+    if date_range is not None:
+        query['time'] = date_range
     if dask_chunks is not None:
         query['dask_chunks'] = dask_chunks
     if group_by is not None:
@@ -235,7 +236,7 @@ def run_query(query, config=None):
     # noinspection PyTypeChecker
     dc = datacube.Datacube(config=config, app='QGIS Plugin')
 
-    test_query = {k: query[k] for k in ('product', 'time', 'x', 'y', 'crs')}
+    test_query = {k: query[k] for k in ('product', 'time', 'x', 'y', 'crs') if k in query}
     test_query = Query(**test_query)
     datasets = dc.index.datasets.search_eager(**test_query.search_terms)
 
