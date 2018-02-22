@@ -39,3 +39,4 @@ def fake_data_2x2x2():
         'dims': {'time': 2, 'x': 2, 'y': 2}
     }
     return fake_data
+

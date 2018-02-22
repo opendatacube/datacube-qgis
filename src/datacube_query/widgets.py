@@ -39,6 +39,7 @@ class WrapperProducts(WrapperBase):
 
 
 class WidgetDateRange(BASE_DATE_RANGE, WIDGET_DATE_RANGE):
+    # TODO date validation (>=1970, start <= end)
 
     def __init__(self, *args, **kwargs):
         super().__init__()
