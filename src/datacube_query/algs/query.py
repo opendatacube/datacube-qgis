@@ -24,6 +24,7 @@ from processing.core.outputs import (
     QgsProcessingOutputMultipleLayers as OutputMultipleLayers)
 
 from qgis.core import (
+    Qgis,
     QgsLogger,
     QgsProcessingContext,
     QgsProcessingException)
@@ -86,8 +87,19 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         self.outputs = {}
 
     def checkParameterValues(self, parameters, context):
+        msgs = []
+
         if self.parameterAsString(parameters, self.PARAM_PRODUCTS, context) == '{}':
-            return False, self.tr('Please select at least one product')
+            msgs += ['Please select at least one product']
+
+        output_crs = self.parameterAsCrs(parameters, self.PARAM_OUTPUT_CRS, context).isValid()
+        output_res = self.parameterAsDouble(parameters, self.PARAM_OUTPUT_RESOLUTION, context)
+        if output_crs and not output_res:
+            msgs += ['Please specify "Output Resolution" when specifying "Output CRS"']
+
+        if msgs:
+            return False, self.tr('\n'.join(msgs))
+
         return super().checkParameterValues(parameters, context)
 
     def createInstance(self, config=None):
