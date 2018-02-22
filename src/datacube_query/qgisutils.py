@@ -6,6 +6,22 @@ from processing.core.ProcessingConfig import ProcessingConfig
 from qgis.PyQt.QtGui import QIcon
 
 
+def get_help(alg_class):
+    """
+    Get an icon bitmap as a QIcon
+
+    :param str basename: file name without path
+    :return: Icon
+    :rtype: qgis.PyQt.QtGui.QIcon
+    """
+    filepath = Path(Path(__file__).parent, 'help', '{}.txt'.format(alg_class))
+    if filepath.exists():
+        return open(filepath).read()
+
+    return str(filepath)
+
+
+
 def get_icon(basename):
     """
     Get an icon bitmap as a QIcon
