@@ -93,7 +93,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
     def createInstance(self, config=None):
         try:
             products = self.get_products_and_measurements()
-        except SQLAlchemyError: #TODO add custom exception classes?
+        except SQLAlchemyError:  # TODO add custom exception classes?
             msg = 'Unable to connect to a running Data Cube instance'
             QgsLogger().warning(msg)
             products = {msg: {'measurements': {}}}
@@ -136,10 +136,10 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         self.addParameter(ParameterExtent(self.PARAM_EXTENT,
                                           self.tr(self.PARAM_EXTENT)))
 
-        # FIXME - May need to disable NetCDF - https://gis.stackexchange.com/q/271525/2856
-        param = ParameterBoolean(self.PARAM_FORMAT,
-                                 self.tr(self.PARAM_FORMAT), defaultValue=False)
-        self.addParameter(param)
+        # FIXME - Temporarily disable NetCDF - https://gis.stackexchange.com/q/271525/2856
+        # param = ParameterBoolean(self.PARAM_FORMAT,
+        #                          self.tr(self.PARAM_FORMAT), defaultValue=False)
+        # self.addParameter(param)
 
         param = ParameterCrs(self.PARAM_OUTPUT_CRS, self.tr(self.PARAM_OUTPUT_CRS), optional=True)
         self.addParameter(param)
@@ -210,7 +210,9 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         extent_crs = self.parameterAsExtentCrs(parameters, self.PARAM_EXTENT, context)  # QgsCoordinateReferenceSystem
         extent_crs = extent_crs.authid()
 
-        output_netcdf = self.parameterAsBool(parameters, self.PARAM_FORMAT, context)
+        # FIXME - Temporarily disable NetCDF - https://gis.stackexchange.com/q/271525/2856
+        # output_netcdf = self.parameterAsBool(parameters, self.PARAM_FORMAT, context)
+        output_netcdf = False
 
         output_crs = self.parameterAsCrs(parameters, self.PARAM_OUTPUT_CRS, context).authid()
         output_crs = None if not output_crs else output_crs
