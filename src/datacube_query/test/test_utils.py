@@ -230,10 +230,15 @@ def test_write_geotiff(fake_data_2x2x2):
     data = xr.Dataset.from_dict(fake_data_2x2x2)
     with tempfile.TemporaryDirectory() as tempdir:
         path = Path(tempdir, 'test.tif')
-        datacube_query.utils.write_geotiff(path, data, time_index=0)
+        datacube_query.utils.write_geotiff(data, path, time_index=0)
 
         assert path.exists()
 
 
-def test_write_netcdf():
-    pass
+def test_write_netcdf(fake_data_2x2x2):
+    data = xr.Dataset.from_dict(fake_data_2x2x2)
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir, 'test.nc')
+        datacube_query.utils.write_netcdf(data, path)
+
+        assert path.exists()

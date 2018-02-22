@@ -292,7 +292,7 @@ def update_tags(filename, bidx=0, ns=None, **tags):
         raster.update_tags(bidx=bidx, ns=ns, **tags)
 
 
-def write_geotiff(filename, dataset, time_index=None, profile_override=None, overwrite=False):
+def write_geotiff(dataset, filename, time_index=None, profile_override=None, overwrite=False):
     """
     Write an xarray dataset to a geotiff
         Modified from datacube.helpers.write_geotiff to support:
@@ -306,7 +306,7 @@ def write_geotiff(filename, dataset, time_index=None, profile_override=None, ove
         https://github.com/opendatacube/datacube-core/blob/develop/datacube/helpers.py
         Original code licensed under the Apache License, Version 2.0 (the "License");
 
-    :param str filename: Output filename
+    :param Union(str, Path) filename: Output filename
     :param xarray.Dataset dataset: xarray dataset containing multiple bands to write to file
     :param int time_index: time index to write to file
     :param dict profile_override: option dict, overrides rasterio file creation options.

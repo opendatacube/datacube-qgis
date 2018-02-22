@@ -291,15 +291,15 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
             else:
                 for i, dt in enumerate(data.time):
                     if group_by is None:
-                        ds = datetime_to_str(dt, '%Y-%m-%d_%H-%M-%S')
-                        tag = datetime_to_str(dt, '%Y:%m:%d %H:%M:%S')
+                        ds = datetime_to_str(dt.data, '%Y-%m-%d_%H-%M-%S')
+                        tag = datetime_to_str(dt.data, '%Y:%m:%d %H:%M:%S')
                     else:
-                        ds = datetime_to_str(dt)
-                        tag = datetime_to_str(dt, '%Y:%m:%d')
+                        ds = datetime_to_str(dt.data)
+                        tag = datetime_to_str(dt.data, '%Y:%m:%d')
 
                     raster_path = basepath.format(ds) + '.tif'
 
-                    write_geotiff(raster_path, data, time_index=i,
+                    write_geotiff(data, raster_path, time_index=i,
                                   profile_override=gtiff_options, overwrite=True)
 
                     update_tags(raster_path, TIFFTAG_DATETIME=tag)
