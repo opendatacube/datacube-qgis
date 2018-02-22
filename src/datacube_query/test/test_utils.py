@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch
-from .helpers import data_path, shut_gdal_up
 
+from datetime import datetime
 import tempfile
 import shutil
 from pathlib import Path
@@ -10,14 +10,14 @@ import datacube
 import numpy as np
 import pandas as pd
 import rasterio as rio
-import xarray
+import xarray as xr
 
 import datacube_query.utils
 
 
-def test_build_overviews():
-    without_ovr = Path(data_path(),'test_without_ovr.tif')
-    with_ovr = Path(data_path(), 'test_with_ovr.tif')
+def test_build_overviews(data_path):
+    without_ovr = Path(data_path,'test_without_ovr.tif')
+    with_ovr = Path(data_path, 'test_with_ovr.tif')
 
     with tempfile.TemporaryDirectory() as tempdir:
         tmp_raster = Path(tempdir, without_ovr.name)
@@ -45,7 +45,7 @@ def test_build_query():
 
 def test_datetime_to_str():
     # Nanosec res
-    dtns = np.datetime64('2001-12-31T01:23:45.0000000')
+    dtns = np.datetime64('2001-12-31T01:23:45.000000000')
     assert datacube_query.utils.datetime_to_str(dtns) == '2001-12-31'
     assert datacube_query.utils.datetime_to_str(dtns, '%Y-%m-%d_%H-%M-%S') == '2001-12-31_01-23-45'
 
@@ -64,9 +64,23 @@ def test_datetime_to_str():
     assert datacube_query.utils.datetime_to_str(dtms) == '2001-12-31'
     assert datacube_query.utils.datetime_to_str(dtms, '%Y-%m-%d_%H-%M-%S') == '2001-12-31_01-23-45'
 
+    # Must be >= 1970
     with pytest.raises(OverflowError):
-        bad_dt64 = np.datetime64('1969-12-31T11:59:59')  # Must be >= 1970
+        bad_dt64 = np.datetime64('1969-12-31T11:59:59')
         datacube_query.utils.datetime_to_str(bad_dt64)
+
+    # Doesn't accept a DataArray
+    with pytest.raises(OSError):  # OSError: [Errno 75] Value too large for defined data type
+        xrns = xr.DataArray(dtns, coords={'time': dtns})
+        datacube_query.utils.datetime_to_str(xrns)
+
+    with pytest.raises(OSError):  # OSError: [Errno 75] Value too large for defined data type
+        xrus = xr.DataArray(dtus, coords={'time': dtus})
+        datacube_query.utils.datetime_to_str(xrus)
+
+    with pytest.raises(OSError):  # OSError: [Errno 75] Value too large for defined data type
+        xrms = xr.DataArray(dtms, coords={'time': dtms})
+        datacube_query.utils.datetime_to_str(xrms)
 
 
 @patch('datacube.Datacube')
@@ -155,7 +169,7 @@ def test_run_query_no_datasets(mock_datacube):
 def test_run_query_no_data(mock_datacube):
     from datacube_query.exceptions import NoDataError
 
-    mock_datacube().load.return_value = xarray.Dataset({})
+    mock_datacube().load.return_value = xr.Dataset({})
 
     query = {'product': 'tma', 'measurements': ['1', '4', '9'],
              'x': (19680402.0, 19680205.0), 'y': (-19680205.0, -19680402.0),
@@ -168,7 +182,7 @@ def test_run_query_no_data(mock_datacube):
 @patch('datacube.Datacube')
 def test_run_query_with_data(mock_datacube):
     nobs, nrows, ncols = 4, 300, 400
-    data_array = xarray.DataArray(
+    data_array = xr.DataArray(
         data=np.ones((nobs, nrows, ncols)),
         coords={
             'time': np.linspace(1, 5, nobs),
@@ -176,7 +190,7 @@ def test_run_query_with_data(mock_datacube):
             'y': np.linspace(-4000000.0, -3992500, nrows)},
         dims=['time', 'y', 'x'])
 
-    mock_dataset = xarray.Dataset({'blue': data_array, 'green': data_array, 'red': data_array})
+    mock_dataset = xr.Dataset({'blue': data_array, 'green': data_array, 'red': data_array})
     mock_datacube().load.return_value = mock_dataset
 
     query = {'product': 'tma', 'measurements': ['1', '4', '9'],
@@ -187,10 +201,39 @@ def test_run_query_with_data(mock_datacube):
 
 
 @patch('datacube.Datacube')
-def test_run_query_with_dodgy_crs(mock_datacube):
+def test_run_query_with_dodgy_crs(mock_datacube, shut_gdal_up):
     query = {'product': 'tma', 'measurements': ['1', '4', '9'],
              'x': (19680402.0, 19680205.0), 'y': (-19680205.0, -19680402.0),
              'time': ['2001-01-01', '2001-12-31'], 'crs': 'EPSG:9000'}
 
-    with pytest.raises(datacube.utils.geometry.InvalidCRSError), shut_gdal_up():
+    with pytest.raises(datacube.utils.geometry.InvalidCRSError), shut_gdal_up:
         datacube_query.utils.run_query(query)
+
+
+def test_upcast(fake_data_2x2x2):
+
+    data = xr.Dataset.from_dict(fake_data_2x2x2)
+    test_data, test_dtype = datacube_query.utils.upcast(data, np.int8)
+
+    # Check cast
+    assert test_data.data_vars['FOO'].dtype == test_dtype == np.int16
+    # Check attrs retained
+    assert test_data.crs
+
+
+def test_update_tags():
+    pass  # tested implicitly in test_build_overviews
+
+
+def test_write_geotiff(fake_data_2x2x2):
+
+    data = xr.Dataset.from_dict(fake_data_2x2x2)
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir, 'test.tif')
+        datacube_query.utils.write_geotiff(path, data, time_index=0)
+
+        assert path.exists()
+
+
+def test_write_netcdf():
+    pass
