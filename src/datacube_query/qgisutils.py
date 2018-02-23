@@ -16,10 +16,8 @@ def get_help(alg_class):
     """
     filepath = Path(Path(__file__).parent, 'help', '{}.txt'.format(alg_class))
     if filepath.exists():
-        return open(filepath).read()
-
-    return str(filepath)
-
+        with open(filepath) as fp:
+            return fp.read()
 
 
 def get_icon(basename):
