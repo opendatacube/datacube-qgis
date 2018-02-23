@@ -12,10 +12,13 @@ import datacube
 from datacube.api.query import Query
 from datacube.storage.storage import write_dataset_to_netcdf as _write_dataset_to_netcdf
 
-from .defaults import (GTIFF_OVR_DEFAULTS,
-                       GTIFF_DEFAULTS,
-                       GTIFF_OVR_RESAMPLING)
-from .exceptions import NoDataError
+from .defaults import (
+    GTIFF_OVR_DEFAULTS,
+    GTIFF_DEFAULTS,
+    GTIFF_OVR_RESAMPLING)
+from .exceptions import (
+    NoDataError,
+    TooManyDatasetsError)
 
 # This will get replaced with a git SHA1 when you do a git archive
 __revision__ = '$Format:%H$'
@@ -219,7 +222,7 @@ def measurement_desc(measurement, aliases, brackets=False):
         return '/'.join([measurement]+aliases)  # Assumes a list...
 
 
-def run_query(query, config=None):
+def run_query(query, config=None, max_datasets=None):
     """
     Load and return the data.
 
@@ -242,6 +245,10 @@ def run_query(query, config=None):
 
     if not datasets:
         raise NoDataError('No datasets found for query:\n{}'.format(str(query)))
+    elif max_datasets and len(datasets) > max_datasets:
+        msg = ('Number of datasets found ({}) exceeds maximum allowed ({}).\n'
+               'Reduce your temporal or spatial extent, or increase the maximum in Settings.')
+        raise TooManyDatasetsError(msg.format(len(datasets), max_datasets))
 
     data = dc.load(**query)
 

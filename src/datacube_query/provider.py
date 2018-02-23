@@ -45,6 +45,8 @@ class DataCubeQueryProvider(QgsProcessingProvider):
         # Activate provider by default
         self.activate = True
 
+        # TODO??? Plugin system to dynamically load algs,
+        # maybe with setuptools entry_points & pkg_resources.iter_entry_points
         self.algs = [DataCubeQueryAlgorithm]
         self.settings = []
 
@@ -56,6 +58,11 @@ class DataCubeQueryProvider(QgsProcessingProvider):
                     self.tr("Open Data Cube database config file"),
                     default='',
                     valuetype=Setting.FILE),
+            Setting(SETTINGS_GROUP,
+                    'datacube_max_datasets',
+                    self.tr("Maximum datasets to load in a query"),
+                    default=500,
+                    valuetype=Setting.INT),
             Setting(SETTINGS_GROUP,
                     'datacube_build_overviews',
                     self.tr("Build GeoTiff Overviews"),

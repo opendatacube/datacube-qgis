@@ -24,14 +24,13 @@ from processing.core.outputs import (
     QgsProcessingOutputMultipleLayers as OutputMultipleLayers)
 
 from qgis.core import (
-    Qgis,
     QgsLogger,
     QgsProcessingContext,
     QgsProcessingException)
 
-from .base import BaseAlgorithm
+from .__base__ import BaseAlgorithm
 from ..defaults import GROUP_BY_FUSE_FUNC
-from ..exceptions import NoDataError
+from ..exceptions import (NoDataError, TooManyDatasetsError)
 from ..parameters import (ParameterDateRange, ParameterProducts)
 from ..qgisutils import (get_icon)
 from ..utils import (
@@ -202,6 +201,10 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         # General options
         settings = self.get_settings()
         config_file = settings['datacube_config_file'] or None
+        try:
+            max_datasets = int(settings['datacube_max_datasets'])
+        except (TypeError, ValueError):
+            max_datasets = None
         gtiff_options = json.loads(settings['datacube_gtiff_options'])
         gtiff_ovr_options = json.loads(settings['datacube_gtiff_ovr_options'])
         overviews = settings['datacube_build_overviews']
@@ -243,7 +246,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
             products, date_range, extent, extent_crs,
             output_crs, output_res, output_netcdf, output_folder,
             config_file, dask_chunks, overviews, gtiff_options, gtiff_ovr_options,
-            group_by, fuse_func, feedback)
+            group_by, fuse_func, max_datasets, feedback)
 
         results = {self.OUTPUT_FOLDER: output_folder, self.OUTPUT_LAYERS: output_layers.keys()}
         self.outputs = output_layers # This is used in postProcessAlgorithm
@@ -254,7 +257,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
                 products, date_range, extent, extent_crs,
                 output_crs, output_res, output_netcdf, output_folder,
                 config_file, dask_chunks, overviews, gtiff_options, gtiff_ovr_options,
-                group_by, fuse_func, feedback):
+                group_by, fuse_func, max_datasets, feedback):
 
         output_layers = {}
         progress_total = 100 / (10*len(products))
@@ -277,10 +280,11 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
                 feedback.setProgressText('Query {}'.format(repr(query)))
 
-                data = run_query(query, config_file)
+                data = run_query(query, config_file, max_datasets=max_datasets)
 
-            except NoDataError as err:
-                feedback.pushInfo('{}'.format(err))
+            except (NoDataError, TooManyDatasetsError) as err:
+                # feedback.pushInfo('{}'.format(err))
+                feedback.reportError('Error encountered processing {}: {}'.format(product, err))
                 feedback.setProgress(int((idx + 1) * 10 * progress_total))
                 continue
 

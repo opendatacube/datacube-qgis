@@ -180,6 +180,20 @@ def test_run_query_no_data(mock_datacube):
 
 
 @patch('datacube.Datacube')
+def test_run_query_too_many_datasets(mock_datacube):
+    from datacube_query.exceptions import TooManyDatasetsError
+
+    mock_datacube().index.datasets.search_eager.return_value = [1] * 3
+
+    query = {'product': 'tma', 'measurements': ['1', '4', '9'],
+             'x': (19680402.0, 19680205.0), 'y': (-19680205.0, -19680402.0),
+             'time': ['2001-01-01', '2001-12-31'], 'crs': 'EPSG:4283'}
+
+    with pytest.raises(TooManyDatasetsError):
+        datacube_query.utils.run_query(query, max_datasets=2)
+
+
+@patch('datacube.Datacube')
 def test_run_query_with_data(mock_datacube):
     nobs, nrows, ncols = 4, 300, 400
     data_array = xr.DataArray(

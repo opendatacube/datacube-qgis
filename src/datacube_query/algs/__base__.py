@@ -1,4 +1,3 @@
-""""""
 __author__ = 'Geoscience Australia'
 __date__ = '2018-01-04'
 __copyright__ = '(C) 2018 by Geoscience Australia'
