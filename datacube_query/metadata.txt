@@ -1,23 +1,14 @@
-# This file contains metadata for your plugin. Since 
-# version 2.0 of QGIS this is the proper way to supply 
-# information about a plugin. The old method of 
-# embedding metadata in __init__.py will 
-# is no longer supported since version 2.0.
-
-# This file should be included when you package your plugin.
-
 [general]
-
 # Mandatory items:
 name=Open Data Cube Query
-qgisMinimumVersion=2.14
+qgisMinimumVersion=3.0
 description=Query and view data stored in an Open Data Cube (https://www.opendatacube.org)
-version=0.1
+version=0.2
 author=Geoscience Australia
 email=luke.pinner@ga.gov.au
 about=Query and view data stored in an Open Data Cube (https://www.opendatacube.org).
-tracker=https://github.com/lpinner/opendatacube-qgis/issues
-repository=https://github.com/lpinner/opendatacube-qgis
+tracker=https://github.com/lpinner/datacube-qgis/issues
+repository=https://github.com/lpinner/datacube-qgis
 
 # Recommended items:
 
@@ -27,7 +18,7 @@ repository=https://github.com/lpinner/opendatacube-qgis
 # Tags are comma separated with spaces allowed
 tags=remote sensing, raster
 
-homepage=https://github.com/lpinner/opendatacube-qgis
+homepage=https://github.com/lpinner/datacube-qgis
 category=Analysis
 icon=icons/opendatacube.png
 # experimental flag

@@ -16,4 +16,4 @@ def classFactory(iface):  # pylint: disable=invalid-name
         :type iface: QgsInterface
     """
     from .plugin import DataCubeQueryPlugin
-    return DataCubeQueryPlugin()
+    return DataCubeQueryPlugin(iface)

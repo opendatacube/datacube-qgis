@@ -1,0 +1,1 @@
+This algorithm queries an Open Data Cube instance to return data in GeoTIFF raster format.
