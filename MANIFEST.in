@@ -1,0 +1,9 @@
+include versioneer.py
+include datacube_query/_version.py
+include datacube_query/LICENSE
+include datacube_query/metadata.txt
+
+prune test/
+prune doc/
+prune scripts/
+prune dist/

@@ -17,3 +17,7 @@ def classFactory(iface):  # pylint: disable=invalid-name
     """
     from .plugin import DataCubeQueryPlugin
     return DataCubeQueryPlugin(iface)
+
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions

@@ -1,0 +1,30 @@
+[general]
+# Mandatory items:
+name=Open Data Cube Query
+qgisMinimumVersion=3.0
+description=Query and view data stored in an Open Data Cube (https://www.opendatacube.org)
+version=0.2
+author=Geoscience Australia
+email=lpinner@noreply.github.com
+about=Query and view data stored in an Open Data Cube (https://www.opendatacube.org).
+tracker=https://github.com/lpinner/datacube-qgis/issues
+repository=https://github.com/lpinner/datacube-qgis
+
+# Recommended items:
+
+# Uncomment the following line and add your changelog:
+# changelog=
+
+# Tags are comma separated with spaces allowed
+tags=remote sensing, raster
+
+homepage=https://github.com/lpinner/datacube-qgis
+category=Analysis
+icon=icons/opendatacube.png
+# experimental flag
+experimental=True
+#experimental=False
+
+# deprecated flag (applies to the whole plugin, not just a single version)
+deprecated=False
+
