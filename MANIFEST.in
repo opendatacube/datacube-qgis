@@ -2,8 +2,10 @@ include versioneer.py
 include datacube_query/_version.py
 include datacube_query/LICENSE
 include datacube_query/metadata.txt
+include datacube_query/help
 
 prune test/
 prune doc/
 prune scripts/
 prune dist/
+prune datacube_query/help/doctrees
