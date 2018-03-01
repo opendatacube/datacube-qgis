@@ -1,80 +1,133 @@
 # derived from Apache 2.0 licensed https://github.com/opendatacube/datacube-core/blob/develop/setup.py
+import configparser
+from fnmatch import fnmatch
+from itertools import chain
+import os
+from pathlib import Path
+from setuptools import setup, find_packages
+from setuptools.command import build_py
+import shutil
 
 import versioneer
-from setuptools import setup, find_packages
 
-print(list(find_packages(exclude=('test', 'test/.*'))))
 
-tests_require = [
-    'pytest',
-    'datacube',
-    'numpy',
-    'pandas',
-    'rasterio',
-    'xarray']
+class BuildPluginCommand(build_py.build_py):
+    """A custom command to build a simple zip archive that QGIS can install as a plugin"""
 
-extras_require = {
-    'doc': ['Sphinx',
-            'setuptools',
-            'sphinx_rtd_theme>=0.2.5'],
-    'test': tests_require
-}
-# An 'all' option, following ipython naming conventions.
-extras_require['all'] = sorted(set(sum(extras_require.values(), [])))
+    def run(self):
+        build_py.build_py.run(self)
+        dist = (Path(self.build_lib)/'..'/'..'/'dist').resolve()
+        basename = '{}-{}'.format(self.distribution.metadata.name, self.distribution.metadata.version)
+        self.mkpath(str(dist))
+        self.make_archive(dist/basename, 'zip', self.build_lib)
 
-setup(
-    name='datacube_query',
-    version=versioneer.get_version(),
-    cmdclass=versioneer.get_cmdclass(),
-    python_requires='>=3.5.2',
 
-    url='https://github.com/lpinner/datacube_query',
-    author='Luke Pinner',
-    maintainer='Luke Pinner',
-    maintainer_email='',
-    description='A QGIS 3 processing plugin to query and return data from an Open Data Cube instance',
-    long_description=open('README.rst').read(),
-    license='Apache License 2.0',
-    classifiers=[
-        "Development Status :: 4 - Beta",
-        "Intended Audience :: End Users/Desktop",
-        "Intended Audience :: Science/Research",
-        "License :: OSI Approved :: Apache Software License",
-        "Natural Language :: English",
-        "Operating System :: MacOS :: MacOS X",
-        "Operating System :: POSIX :: Linux",
-        "Operating System :: Microsoft :: Windows",
-        "Programming Language :: Python",
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
-        "Topic :: Scientific/Engineering :: GIS",
-        "Topic :: Scientific/Engineering :: Information Analysis",
-    ],
+def get_package_data(package, path, excludes=None):
+    _excludes = ['*.py*']
+    if excludes is not None:
+        if isinstance(excludes, str):
+            _excludes += [excludes]
+        else:
+            _excludes += excludes
+    relative_to = package.replace('.', '/')
+    for root, dirs, files in os.walk(path):
+        for f in files:
+            p = Path(root,f).relative_to(relative_to)
+            if not any(fnmatch(p, x) for x in _excludes):
+                yield p
 
-    # package_dir={'': 'src'},
 
-    packages=find_packages(
-        exclude=('test', 'test/.*')
-    ),
-    package_data={
-        'datacube_query': ['help', 'help/*.*', 'help/*/*.*'],
-        'datacube_query': ['i18n', 'i18n/*.*'],
-        'datacube_query': ['icons', 'icons/*.*'],
-        'datacube_query.ui': ['*.ui'],
-        },
-    setup_requires=[
-        'pytest-runner'
-    ],
-    install_requires=[
+def main():
+
+    version = versioneer.get_version()
+    cmdclass = versioneer.get_cmdclass()
+
+    config = configparser.ConfigParser()
+    config.read('METADATA.in')
+    config['general']['version']=version
+    with open('datacube_query/metadata.txt', 'w') as metadata:
+        config.write(metadata)
+    shutil.copy('LICENSE', 'datacube_query/LICENSE')
+
+    tests_require = [
+        'pytest',
         'datacube',
-        'dask[array]',
         'numpy',
         'pandas',
-        'rasterio>=0.9a10',  # required for zip reading, 0.9 gets around 1.0a ordering problems
-        'xarray>=0.9',  # >0.9 fixes most problems with `crs` attributes being lost
-   ],
+        'rasterio',
+        'xarray']
 
-    extras_require=extras_require,
-    tests_require=tests_require,
-)
+    extras_require = {
+        'doc': ['Sphinx',
+                'setuptools',
+                'sphinx_rtd_theme>=0.2.5'],
+        'test': tests_require
+    }
+    # An 'all' option, following ipython naming conventions.
+    extras_require['all'] = sorted(set(sum(extras_require.values(), [])))
+
+    package_data = {'datacube_query':
+                        chain(get_package_data('datacube_query', 'datacube_query/help', excludes='*doctree*'),
+                              get_package_data('datacube_query', 'datacube_query/i18n'),
+                              get_package_data('datacube_query', 'datacube_query/icons'),
+                              ('LICENSE', 'metadata.txt')),
+                    'datacube_query.ui':
+                        get_package_data('datacube_query.ui', 'datacube_query/ui')
+                    }
+
+    cmdclass.update({'build_plugin': BuildPluginCommand})
+
+    setup(
+        name='datacube_query',
+        version=version,
+        cmdclass=cmdclass,
+        python_requires='>=3.5.2',
+        url='https://github.com/lpinner/datacube_query',
+        author=config['general']['author'],
+        maintainer=config['general']['author'],
+        maintainer_email=config['general']['email'],
+        description=config['general']['description'],
+        long_description=open('README.rst').read(),
+        license='Apache License 2.0',
+        classifiers=[
+            "Development Status :: 4 - Beta",
+            "Intended Audience :: End Users/Desktop",
+            "Intended Audience :: Science/Research",
+            "License :: OSI Approved :: Apache Software License",
+            "Natural Language :: English",
+            "Operating System :: MacOS :: MacOS X",
+            "Operating System :: POSIX :: Linux",
+            "Operating System :: Microsoft :: Windows",
+            "Programming Language :: Python",
+            "Programming Language :: Python :: 3",
+            "Programming Language :: Python :: 3.5",
+            "Programming Language :: Python :: 3.6",
+            "Topic :: Scientific/Engineering :: GIS",
+            "Topic :: Scientific/Engineering :: Information Analysis",
+        ],
+
+        packages=find_packages(
+            exclude=('test', 'test/.*')
+        ),
+
+        package_data=package_data,
+
+        setup_requires=[
+            'pytest-runner'
+        ],
+        install_requires=[
+            'datacube',
+            'dask[array]',
+            'numpy',
+            'pandas',
+            'rasterio>=0.9a10',  # required for zip reading, 0.9 gets around 1.0a ordering problems
+            'xarray>=0.9',  # >0.9 fixes most problems with `crs` attributes being lost
+       ],
+
+        extras_require=extras_require,
+        tests_require=tests_require,
+    )
+
+
+if __name__ == '__main__':
+    main()
