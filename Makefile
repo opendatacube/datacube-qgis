@@ -15,7 +15,8 @@ clean:
     find . -name '*~' -exec rm -f  {} +
 
     rm -rf datacube_query/help/html
-    rm -rf datacube_query/metadata.txt
+    rm -f datacube_query/metadata.txt
+    rm -rf datacube_query/LICENSE
 
 
 test:
