@@ -1,15 +1,16 @@
-import pytest
-
+from collections import OrderedDict
 import json
-from datacube_query import widgets
-from qgis.PyQt.QtWidgets import QApplication
+
+from qgis.core import QgsApplication
+
 
 # TODO user interaction with pytest-qt qtbot fixture??? http://pytest-qt.readthedocs.io
 
 
 def test_daterange():
 
-    app = QApplication([])
+    app = QgsApplication([], False)
+    from datacube_query.ui import widgets
 
     test_data = ['2001-01-01', '2001-12-31']
 
@@ -21,10 +22,9 @@ def test_daterange():
 
 
 def test_products():
-    from collections import OrderedDict
-    import json
 
-    app = QApplication([])
+    app = QgsApplication([], False)
+    from datacube_query.ui import widgets
 
     test_data = OrderedDict([['ls5_nbar_albers', ['blue', 'green', 'red', 'nir', 'swir1', 'swir2']],
                             ['ls7_nbar_albers', ['blue', 'green', 'red', 'nir', 'swir1', 'swir2']],
