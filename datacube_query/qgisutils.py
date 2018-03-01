@@ -4,15 +4,32 @@ from pathlib import Path
 from processing.core.ProcessingConfig import ProcessingConfig
 
 from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtCore import QUrl
 
 
 def get_help(alg_class):
     """
-    Get an icon bitmap as a QIcon
+    Get help URL
 
-    :param str basename: file name without path
-    :return: Icon
-    :rtype: qgis.PyQt.QtGui.QIcon
+    :param str alg_class: Algorithm class name
+    :return: help URL
+    :rtype: str
+    """
+    helppath = Path(__file__).parent / 'help/html'
+    filepath = helppath / 'algs/{}.html'.format(alg_class.lower())
+    if filepath.exists():
+        return QUrl.fromLocalFile(str(filepath)).toString()
+    elif helppath.exists():
+        return QUrl.fromLocalFile(str(helppath / 'index.html')).toString()
+
+
+def get_short_help(alg_class):
+    """
+    Get help string
+
+    :param str alg_class: Algorithm class name
+    :return: help string
+    :rtype: str
     """
     filepath = Path(Path(__file__).parent, 'help', '{}.txt'.format(alg_class))
     if filepath.exists():
