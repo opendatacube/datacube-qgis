@@ -127,6 +127,8 @@ def main():
         extras_require=extras_require,
         tests_require=tests_require,
     )
+    os.unlink('datacube_query/metadata.txt')
+    os.unlink('datacube_query/LICENSE')
 
 
 if __name__ == '__main__':
