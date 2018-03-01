@@ -49,13 +49,16 @@ def main():
         config.write(metadata)
     shutil.copy('LICENSE', 'datacube_query/LICENSE')
 
-    tests_require = [
-        'pytest',
+    install_requires = [
         'datacube',
+        'dask[array]',
         'numpy',
         'pandas',
-        'rasterio',
-        'xarray']
+        'rasterio>=0.9a10',  # required for zip reading, 0.9 gets around 1.0a ordering problems
+        'xarray>=0.9',  # >0.9 fixes most problems with `crs` attributes being lost
+    ]
+
+    tests_require = ['pytest'] + install_requires
 
     extras_require = {
         'doc': ['Sphinx',
@@ -115,14 +118,7 @@ def main():
         setup_requires=[
             'pytest-runner'
         ],
-        install_requires=[
-            'datacube',
-            'dask[array]',
-            'numpy',
-            'pandas',
-            'rasterio>=0.9a10',  # required for zip reading, 0.9 gets around 1.0a ordering problems
-            'xarray>=0.9',  # >0.9 fixes most problems with `crs` attributes being lost
-       ],
+        install_requires=install_requires,
 
         extras_require=extras_require,
         tests_require=tests_require,
