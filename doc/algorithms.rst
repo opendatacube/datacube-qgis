@@ -1,0 +1,8 @@
+Algorithms
+----------
+
+.. toctree::
+   :glob:
+
+   algs/*
+
