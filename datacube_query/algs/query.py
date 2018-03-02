@@ -330,6 +330,9 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
                     feedback.setProgress(int((idx * 10 + i + 1) * progress_total))
 
+                    if feedback.isCanceled():
+                        return output_layers
+
             feedback.setProgress(int((idx + 1) * 10 * progress_total))
 
         return output_layers
