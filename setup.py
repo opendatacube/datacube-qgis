@@ -15,7 +15,7 @@ class BuildPluginCommand(build_py.build_py):
     """A custom command to build a simple zip archive that QGIS can install as a plugin"""
 
     def run(self):
-        build_py.build_py.run(self)
+        super().run()
         dist = (Path(self.build_lib)/'..'/'..'/'dist').resolve()
         basename = '{}-{}'.format(self.distribution.metadata.name, self.distribution.metadata.version)
         self.mkpath(str(dist))
