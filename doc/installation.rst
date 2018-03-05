@@ -15,16 +15,20 @@ Linux
 Installation with `pip`_:
 
 - Install `QGIS`_ 3 via your distribution package manager
-- Install the datacube-core package which will also install the required dependencies:
-    >>> pip3 install datacube
+- Install the datacube-core package which will also install the required dependencies
+    .. code-block:: bash
+
+        $ pip3 install datacube
 
 Installation with `conda`_:
 
 - Install `miniconda`_ if you haven't already
 - Create a QGIS + Data Cube environment
-    >>> conda create  -c conda-forge -n qgiscube python=3.6 qgis=3 datacube
-    >>> source activate qgiscube
-    >>> qgis
+    .. code-block:: bash
+
+        $ conda create  -c conda-forge -n qgiscube python=3.6 qgis=3 datacube
+        $ source activate qgiscube
+        $ qgis
 
 Windows
 ~~~~~~~
@@ -37,8 +41,10 @@ Installation with `OSGeo4W`_
   `Unofficial Windows Binaries for Python Extension Packages <https://www.lfd.uci.edu/~gohlke/pythonlibs/#rasterio>`_
   site
 - Open an OSGeo4W shell and
-    >>> pip3 install <path to download folder>\rasterio-1.0a12-cp36-cp36m-win_amd64.whl
-    >>> pip3 install datacube
+    .. code-block:: batch
+
+        C:\> pip3 install <path to download folder>\rasterio-1.0a12-cp36-cp36m-win_amd64.whl
+        C:\> pip3 install datacube
 
     Note: You *may* need to install updated GDAL, numpy and pandas from the above site.
 
