@@ -55,5 +55,6 @@ GTIFF_OVR_DEFAULTS = {'resampling': 'average',
 
 GROUP_BY_FUSE_FUNC = OrderedDict([
     ('Solar Day', ('solar_day', None)),
+    ('Time', (None, None)),  #defaults to 'time' in datacube-core
     ('Solar Day (GA PQ Fuser)', ('solar_day', ga_pq_fuser)),
-    ('Don\'t group', (None, None))])  #defaults to 'time' in datacube-core
+    ])
