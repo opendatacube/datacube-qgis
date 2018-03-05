@@ -58,7 +58,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
     # PARAM_PLATFORM
     # PARAM_INSTRUMENT
     # /TODO ???
-    PARAM_PRODUCTS = 'Product and measurements'
+    PARAM_PRODUCTS = 'Products and measurements'
     PARAM_DATE_RANGE = 'Date range (yyyy-mm-dd)'
     PARAM_EXTENT = 'Query extent'
 
