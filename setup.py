@@ -34,7 +34,7 @@ def get_package_data(package, path, excludes=None):
         for f in files:
             p = Path(root,f).relative_to(relative_to)
             if not any(fnmatch(p, x) for x in _excludes):
-                yield p
+                yield str(p)  # Avoid "TypeError: 'WindowsPath' object does not support indexing" on Win
 
 
 def main():

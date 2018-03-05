@@ -1,12 +1,12 @@
 .RECIPEPREFIX +=
-.PHONY: test build doc
+.PHONY: build clean doc test
 
 build: doc
     python3 setup.py build_plugin
 
 clean:
     find . -type d -name '.cache' -exec rm -rf {} +
-    find . -type d-name '.eggs' -exec rm -rf {} +
+    find . -type d -name '.eggs' -exec rm -rf {} +
     find . -type d -name 'build' -exec rm -rf {} +
     find . -type d -name 'dist' -exec rm -rf {} +
     find . -type d -name 'doctrees' -exec rm -rf {} +
@@ -23,10 +23,8 @@ clean:
 
 
 doc: clean
-    # make -C doc
     python3 setup.py build_sphinx
 
 
 test: clean
-    # py.test-3 --verbose --color=yes
     python3 setup.py pytest
