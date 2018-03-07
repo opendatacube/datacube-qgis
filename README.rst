@@ -1,4 +1,6 @@
-Open Data Cube Query
+Open Data Cube QGIS Plugin
 ==================================
 
-Open Data Cube QGIS 3 Plugin
+A QGIS 3 processing plugin to query and return data in GeoTIFF format from an Open Data Cube.
+
+.. image:: images/algorithm_dialog.png
