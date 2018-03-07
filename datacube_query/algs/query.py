@@ -13,7 +13,6 @@ from pathlib import Path
 from sqlalchemy.exc import SQLAlchemyError
 
 from processing.core.parameters import (
-    QgsProcessingParameterBoolean as ParameterBoolean,
     QgsProcessingParameterCrs as ParameterCrs,
     QgsProcessingParameterEnum as ParameterEnum,
     QgsProcessingParameterExtent as ParameterExtent,
@@ -53,11 +52,6 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
     OUTPUT_FOLDER = 'Output Directory'
     OUTPUT_LAYERS = 'Output Layers'
 
-    # TODO ??? Add more input params.
-    # PARAM_PRODUCT_TYPE   # Would need to build a signal/slot filter for PARAM_PRODUCTS widget
-    # PARAM_PLATFORM
-    # PARAM_INSTRUMENT
-    # /TODO ???
     PARAM_PRODUCTS = 'Products and measurements'
     PARAM_DATE_RANGE = 'Date range (yyyy-mm-dd)'
     PARAM_EXTENT = 'Query extent'
@@ -91,6 +85,11 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         if self.parameterAsString(parameters, self.PARAM_PRODUCTS, context) == '{}':
             msgs += ['Please select at least one product']
 
+        date_range = self.parameterAsString(parameters, self.PARAM_DATE_RANGE, context)
+        date_range = json.loads(date_range)
+        if not all(date_range) or not all([d is None for d in date_range]):
+            msgs += ['Please select two dates or none at all']
+
         output_crs = self.parameterAsCrs(parameters, self.PARAM_OUTPUT_CRS, context).isValid()
         output_res = self.parameterAsDouble(parameters, self.PARAM_OUTPUT_RESOLUTION, context)
         if output_crs and not output_res:
@@ -106,13 +105,22 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
             products = self.get_products_and_measurements()
         except SQLAlchemyError:  # TODO add custom exception classes?
             msg = 'Unable to connect to a running Data Cube instance'
-            QgsLogger().warning(msg)Improve Query alg docs
+            QgsLogger().warning(msg)
             products = {msg: {'measurements': {}}}
 
         return type(self)(products)
 
     def displayName(self, *args, **kwargs):
         return self.tr('Data Cube Query')
+
+    def flags(self):
+        # Default is FlagCanCancel | FlagSupportsBatch
+        # but this alg looks bad in batch mode because of the big tree widget.
+        # Not sure why, but setting this doesn't actually 
+        # stop the "Run As Batch Process..." button from being shown.
+
+        # return self.FlagCanCancel
+        return super().flags() & ~self.FlagSupportsBatch
 
     def get_products_and_measurements(self):
         config_file = self.get_settings()['datacube_config_file'] or None
