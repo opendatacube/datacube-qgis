@@ -106,7 +106,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
             products = self.get_products_and_measurements()
         except SQLAlchemyError:  # TODO add custom exception classes?
             msg = 'Unable to connect to a running Data Cube instance'
-            QgsLogger().warning(msg)
+            QgsLogger().warning(msg)Improve Query alg docs
             products = {msg: {'measurements': {}}}
 
         return type(self)(products)

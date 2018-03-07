@@ -41,11 +41,12 @@ class WidgetDateRange(BASE_DATE_RANGE, WIDGET_DATE_RANGE):
             self._start = None
             self._end = None
         else:
+            # data[-1] is in case a single value is passed. Set both dates to that value
             self.date_start.setDate(QDate.fromString(data[0], self._dateformat))
-            self.date_end.setDate(QDate.fromString(data[1], self._dateformat))
+            self.date_end.setDate(QDate.fromString(data[-1], self._dateformat))
 
             self._start = data[0]
-            self._end = data[1]
+            self._end = data[-1]
 
     def update_start(self, qdatetime):
         self._start = qdatetime.toString(self._dateformat)
@@ -54,7 +55,7 @@ class WidgetDateRange(BASE_DATE_RANGE, WIDGET_DATE_RANGE):
         self._end = qdatetime.toString(self._dateformat)
 
     def value(self):
-        retval = [self._start, self._end] if (self._start and self._end) else None
+        retval = [self._start, self._end] # if (self._start and self._end) else None
         return json.dumps(retval)
 
 
