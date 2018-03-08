@@ -7,4 +7,6 @@ channels:
 dependencies:
 - python >= 3.6
 - datacube
-- qgis
+- qgis >= 2.99
+- rasterio > 0.9
+

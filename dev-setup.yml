@@ -7,7 +7,8 @@ channels:
 dependencies:
 - python >= 3.6
 - datacube
-- qgis
+- qgis >= 2.99
+- rasterio > 0.9
 - pytest
 - sphinx
 - sphinx_rtd_theme>=0.2.5
