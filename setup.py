@@ -14,12 +14,22 @@ import versioneer
 class BuildPluginCommand(build_py.build_py):
     """A custom command to build a simple zip archive that QGIS can install as a plugin"""
 
+    description = 'Build QGIS Plugin zip archive'
+    user_options = build_py.build_py.user_options + [
+        ('plugin-dir=', None, 'path to save plugin archive'),
+    ]
+
+    def initialize_options(self):
+        self.plugin_dir = None
+        super().initialize_options()
+
     def run(self):
         super().run()
-        dist = (Path(self.build_lib)/'..'/'..'/'dist').resolve()
+        plugin_dir = Path(self.plugin_dir).resolve()
         basename = '{}-{}'.format(self.distribution.metadata.name, self.distribution.metadata.version)
-        self.mkpath(str(dist))
-        self.make_archive(dist/basename, 'zip', self.build_lib)
+        self.mkpath(str(plugin_dir))
+        self.make_archive(plugin_dir/basename, 'zip', self.build_lib)
+        shutil.rmtree(self.build_lib)
 
 
 def get_package_data(package, path, excludes=None):

@@ -1,0 +1,10 @@
+name: odc-qgis
+channels:
+- conda-forge/label/dev
+- conda-forge
+- defaults
+- nodefaults
+dependencies:
+- python >= 3.6
+- datacube
+- qgis
