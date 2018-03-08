@@ -34,7 +34,7 @@ class BuildPluginCommand(build_py.build_py):
         basename = '{}-{}'.format(self.distribution.metadata.name, self.distribution.metadata.version)
         self.mkpath(str(plugin_dir))
         self.make_archive(plugin_dir/basename, 'zip', self.build_lib)
-        shutil.rmtree(self.build_lib)
+        # shutil.rmtree(self.build_lib)
 
 
 def get_package_data(package, path, excludes=None):
