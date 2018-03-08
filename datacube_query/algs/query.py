@@ -87,7 +87,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
         date_range = self.parameterAsString(parameters, self.PARAM_DATE_RANGE, context)
         date_range = json.loads(date_range)
-        if not all(date_range) or not all([d is None for d in date_range]):
+        if not all(date_range) and not all([d is None for d in date_range]):
             msgs += ['Please select two dates or none at all']
 
         output_crs = self.parameterAsCrs(parameters, self.PARAM_OUTPUT_CRS, context).isValid()
