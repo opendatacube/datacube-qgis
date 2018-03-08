@@ -31,7 +31,7 @@ class WidgetDateRange(BASE_DATE_RANGE, WIDGET_DATE_RANGE):
         self.date_end.valueChanged.connect(self.update_end)
 
     def set_value(self, data):
-        data = data if data else {}
+        data = data if data else None
         data = json.loads(data) if isinstance(data, str) else data
 
         if data is None:
@@ -55,7 +55,7 @@ class WidgetDateRange(BASE_DATE_RANGE, WIDGET_DATE_RANGE):
         self._end = qdatetime.toString(self._dateformat)
 
     def value(self):
-        retval = [self._start, self._end] # if (self._start and self._end) else None
+        retval = [self._start, self._end]
         return json.dumps(retval)
 
 

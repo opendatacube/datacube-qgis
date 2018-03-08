@@ -31,7 +31,7 @@ def test_daterange_none():
     w = widgets.WidgetDateRange()
     w.set_value(test_data)
 
-    assert json.loads(w.value()) == test_data
+    assert json.loads(w.value()) == [test_data, test_data]
     app.exit(0)
 
 
