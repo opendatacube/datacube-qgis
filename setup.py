@@ -23,6 +23,11 @@ class BuildPluginCommand(build_py.build_py):
         self.plugin_dir = None
         super().initialize_options()
 
+    def finalize_options(self):
+        if self.plugin_dir is None:
+            self.plugin_dir = self.build_lib
+        super().finalize_options()
+
     def run(self):
         super().run()
         plugin_dir = Path(self.plugin_dir).resolve()
