@@ -87,7 +87,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
         date_range = self.parameterAsString(parameters, self.PARAM_DATE_RANGE, context)
         date_range = json.loads(date_range)
-        if not all(date_range) and not all([d is None for d in date_range]):
+        if not all(date_range) and not all([not d for d in date_range]):
             msgs += ['Please select two dates or none at all']
 
         output_crs = self.parameterAsCrs(parameters, self.PARAM_OUTPUT_CRS, context).isValid()
@@ -227,6 +227,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
         date_range = self.parameterAsString(parameters, self.PARAM_DATE_RANGE, context)
         date_range = json.loads(date_range)
+        date_range = date_range if all(date_range) else None
 
         extent = self.parameterAsExtent(parameters, self.PARAM_EXTENT, context)  # QgsRectangle
         extent = [extent.xMinimum(), extent.yMinimum(), extent.xMaximum(), extent.yMaximum()]
