@@ -1,6 +1,9 @@
 from collections import OrderedDict
 from datacube.helpers import ga_pq_fuser
 
+
+HELP_URL = 'http://datacube-qgis.readthedocs.io/en/latest'
+
 # TODO Disabling rasterio enums (for now).
 # Having this enabled segfaults QGIS 2.99dev (3.0) when the "Select CRS" button
 # in _any_ processing alg. dialog (even core) is clicked.

@@ -6,6 +6,8 @@ from processing.core.ProcessingConfig import ProcessingConfig
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import QUrl
 
+from .defaults import HELP_URL
+
 
 def get_help(alg_class):
     """
@@ -17,10 +19,12 @@ def get_help(alg_class):
     """
     helppath = Path(__file__).parent / 'help/html'
     filepath = helppath / 'algs/{}.html'.format(alg_class.lower())
+    url = '{}/algs/{}.html'.format(HELP_URL, alg_class.lower())
+
     if filepath.exists():
         return QUrl.fromLocalFile(str(filepath)).toString()
-    elif helppath.exists():
-        return QUrl.fromLocalFile(str(helppath / 'index.html')).toString()
+    else:
+        return url
 
 
 def get_short_help(alg_class):
