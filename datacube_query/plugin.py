@@ -31,7 +31,6 @@ class DataCubeQueryPlugin:
 
     def __init__(self, iface):
         self.iface = iface
-        # TODO figure out why a duplicate provider is registered
         self.provider = DataCubeQueryProvider()
 
     def initGui(self):
