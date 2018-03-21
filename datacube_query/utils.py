@@ -317,8 +317,11 @@ def write_geotiff(dataset, filename, time_index=None, profile_override=None, ove
 
     profile_override = profile_override or {}
 
-    dtypes = {val.dtype for val in dataset.data_vars.values()}
-    assert len(dtypes) == 1  # Check for multiple dtypes
+    try:
+        dtypes = {val.dtype for val in dataset.data_vars.values()}
+        assert len(dtypes) == 1  # Check for multiple dtypes
+    except AttributeError:
+        dtypes = [dataset.dtype]
     dtype = dtypes.pop()
 
     if not check_dtype(dtype):  # Check for invalid dtypes
