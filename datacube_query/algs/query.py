@@ -65,8 +65,6 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
                                '(required for products with no resolution defined)')
     PARAM_GROUP_BY = 'Group data by'
 
-    # TODO error handling with QgsProcessingException
-
     def __init__(self, products=None):
         """
         Initialise the algorithm
@@ -110,7 +108,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
     def createInstance(self, config=None):
         try:
             products = self.get_products_and_measurements()
-        except SQLAlchemyError:  # TODO add custom exception classes?
+        except SQLAlchemyError:
             msg = 'Unable to connect to a running Data Cube instance'
             QgsLogger().warning(msg)
             products = {msg: {'measurements': {}}}
