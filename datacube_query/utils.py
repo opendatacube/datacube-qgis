@@ -151,14 +151,12 @@ def get_products_and_measurements(config=None):
 
     dc = datacube.Datacube(config=config)
     products = dc.list_products()
-    # products = products[~products['name'].str.contains("archived")]  # TODO this is a kludge/workaround
     measurements = dc.list_measurements()
     measurements.reset_index(inplace=True)
     display_columns = ['name', 'description']
     products = products[display_columns]
     display_columns = ['measurement', 'aliases', 'product']
     measurements = measurements[display_columns]
-    # measurements = measurements[~measurements['product'].str.contains('archived')] # TODO this is a kludge/workaround
 
     products.set_index(['name'], inplace=True, drop=False)
     measurements.set_index(['product'], inplace=True, drop=False)
@@ -167,8 +165,7 @@ def get_products_and_measurements(config=None):
     prodmeas['meas_desc'] = prodmeas[['measurement', 'aliases']].apply(lambda x: measurement_desc(*x), axis=1)
 
     for row in prodmeas.itertuples():
-        # TODO - what if description is NA
-        description = '{} ({})'.format(row.description, row.name)
+        description = '{} ({})'.format(row.description, row.name) if row.description else row.name
         proddict[description]['product'] = row.product
         proddict[description]['measurements'][row.meas_desc] = row.measurement
 
