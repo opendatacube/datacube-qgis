@@ -20,9 +20,6 @@ from .exceptions import (
     NoDataError,
     TooManyDatasetsError)
 
-# This will get replaced with a git SHA1 when you do a git archive
-__revision__ = '$Format:%H$'
-
 
 def build_overviews(filename, overview_options=None):
     """

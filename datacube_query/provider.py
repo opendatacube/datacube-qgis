@@ -1,27 +1,3 @@
-# -*- coding: utf-8 -*-
-
-"""
-/***************************************************************************
- DataCubeQuery
-                                 A QGIS plugin
- Query and view data stored in an Open Data Cube (https://www.opendatacube.org)
-                              -------------------
-        begin                : 2017-11-09
-        copyright            : (C) 2017 by Geoscience Australia
-        email                : luke.pinner@ga.gov.au
- ***************************************************************************/
-
-
-"""
-
-__author__ = 'Geoscience Australia'
-__date__ = '2017-11-09'
-__copyright__ = '(C) 2017 by Geoscience Australia'
-
-# This will get replaced with a git SHA1 when you do a git archive
-
-__revision__ = '$Format:%H$'
-
 import json
 
 from qgis.core import QgsProcessingProvider

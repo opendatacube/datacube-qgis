@@ -1,5 +1,3 @@
-
-
 class NoDataError(RuntimeError):
     pass
 

@@ -1,11 +1,3 @@
-""""""
-__author__ = 'Geoscience Australia'
-__date__ = '2017-11-09'
-__copyright__ = '(C) 2017 by Geoscience Australia'
-
-# This will get replaced with a git SHA1 when you do a git archive
-__revision__ = '$Format:%H$'
-
 from collections import defaultdict
 from datetime import datetime
 import json
