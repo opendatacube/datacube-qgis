@@ -7,6 +7,7 @@ __copyright__ = '(C) 2017 by Geoscience Australia'
 __revision__ = '$Format:%H$'
 
 from collections import defaultdict
+from datetime import datetime
 import json
 from pathlib import Path
 
@@ -80,6 +81,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         self.outputs = {}
 
     def checkParameterValues(self, parameters, context):
+
         msgs = []
 
         if self.parameterAsString(parameters, self.PARAM_PRODUCTS, context) == '{}':
@@ -89,6 +91,11 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         date_range = json.loads(date_range)
         if not all(date_range) and not all([not d for d in date_range]):
             msgs += ['Please select two dates or none at all']
+
+        if all(date_range):
+            date_range = [datetime.strptime(d, '%Y-%m-%d') for d in date_range]
+            if date_range[0] >  date_range[1]:
+                msgs += ['The start date must be earlier than the end date']
 
         output_crs = self.parameterAsCrs(parameters, self.PARAM_OUTPUT_CRS, context).isValid()
         output_res = self.parameterAsDouble(parameters, self.PARAM_OUTPUT_RESOLUTION, context)

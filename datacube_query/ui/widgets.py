@@ -16,7 +16,6 @@ WIDGET_PRODUCT, BASE_PRODUCT = uic.loadUiType(Path(_ui_path, 'widget_product.ui'
 
 
 class WidgetDateRange(BASE_DATE_RANGE, WIDGET_DATE_RANGE):
-    # TODO date validation (>=1970, start <= end)
 
     def __init__(self, *args, **kwargs):
         super().__init__()
@@ -119,6 +118,7 @@ class WidgetProducts(BASE_PRODUCT, WIDGET_PRODUCT):
         """" Select items in the tree
              This is mostly used when running alg from history so the dialog loads all products
              and reselects original prod/measurement selections"""
+
         data = data if data else {}
         data = json.loads(data) if isinstance(data, str) else data
 

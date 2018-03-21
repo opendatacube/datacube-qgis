@@ -10,7 +10,6 @@ class ParameterDateRange(QgsProcessingParameterString):
 
             e.g. ['', ''], ['2017-01-01', ''] or ['', '2017-12-31']
     """
-    # TODO - validate start <= end
     def __init__(self, name, description, *args, **kwargs):
         wrapper = {'widget_wrapper': 'datacube_query.ui.wrappers.WrapperDateRange'}
         super().__init__(name, description, *args, **kwargs)
