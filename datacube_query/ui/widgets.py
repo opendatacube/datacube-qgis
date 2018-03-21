@@ -115,8 +115,10 @@ class WidgetProducts(BASE_PRODUCT, WIDGET_PRODUCT):
                 child.setText(0, measurement)
                 child.setCheckState(0, Qt.Unchecked)
 
-    def set_value(self, data=None): #TODO make sure running alg from history loads all products and selects orig
-        """" Select items in the tree"""
+    def set_value(self, data=None):
+        """" Select items in the tree
+             This is mostly used when running alg from history so the dialog loads all products
+             and reselects original prod/measurement selections"""
         data = data if data else {}
         data = json.loads(data) if isinstance(data, str) else data
 
