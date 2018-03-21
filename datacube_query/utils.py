@@ -49,11 +49,6 @@ def build_overviews(filename, overview_options=None):
 
     resampling = GTIFF_OVR_RESAMPLING[options['resampling']]
 
-    # TODO check if enum.Enum or rasterio enums still segfault QGIS3 after release
-    # TODO this is a kludge to mock an Enum as rasterio.io.build_overviews requires an Enum
-    from collections import namedtuple
-    resampling = namedtuple('Enum', 'value')(resampling)
-
     with rio.open(filename, mode) as raster:
         raster.build_overviews(options['factors'], resampling)
         raster.update_tags(ns='rio_overview', resampling=options['resampling'])

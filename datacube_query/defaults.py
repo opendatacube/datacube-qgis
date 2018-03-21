@@ -1,45 +1,14 @@
 from collections import OrderedDict
+from rasterio.enums import Resampling, Compression
 from datacube.helpers import ga_pq_fuser
 
 
 HELP_URL = 'http://datacube-qgis.readthedocs.io/en/latest'
-
-# TODO Disabling rasterio enums (for now).
-# Having this enabled segfaults QGIS 2.99dev (3.0) when the "Select CRS" button
-# in _any_ processing alg. dialog (even core) is clicked.
-# Might be related to rasterio 0.36. Upgrading to 1.0a(n) fixes the segfault
-# However, could be rasterio's use of enum.Enum which I've separately found to segfault QGIS...
-
-# from rasterio.enums import Resampling, Compression
-#
-# GTIFF_COMPRESSION = [c.value for c in Compression]
-# GTIFF_OVR_RESAMPLING = {r.name: r for r in Resampling}
-
 SETTINGS_GROUP = 'Open Data Cube'
 
-GTIFF_COMPRESSION = [
-    'JPEG',
-    'LZW',
-    'PACKBITS',
-    'DEFLATE',
-    'LZMA',
-    'NONE'
-]
+GTIFF_COMPRESSION = [c.value for c in Compression]
+GTIFF_OVR_RESAMPLING = {r.name: r for r in Resampling}
 
-GTIFF_OVR_RESAMPLING = {
-    'nearest': 0,
-    'bilinear': 1,
-    'cubic': 2,
-    'cubic_spline': 3,
-    'lanczos': 4,
-    'average': 5,
-    'mode': 6,
-    'gauss': 7,
-    'max': 8,
-    'min': 9,
-    'med': 10,
-    'q1': 11,
-    'q3': 12}
 
 GTIFF_DEFAULTS = {"driver": "GTiff",
                   "interleave": "band", "tiled": True,
@@ -56,8 +25,9 @@ GTIFF_OVR_DEFAULTS = {'resampling': 'average',
                       'factors': [2, 4, 8, 16, 32],
                       'internal_storage': True}
 
-GROUP_BY_FUSE_FUNC = OrderedDict([
-    ('Solar Day', ('solar_day', None)),
-    ('Time', (None, None)),  #defaults to 'time' in datacube-core
-    ('Solar Day (GA PQ Fuser)', ('solar_day', ga_pq_fuser)),
+GROUP_BY_FUSE_FUNC = OrderedDict(
+    [
+        ('Solar Day', ('solar_day', None)), #default in datacube-qgis
+        ('Time', (None, None)),  #defaults to 'time' in datacube-core
+        ('Solar Day (GA PQ Fuser)', ('solar_day', ga_pq_fuser)),
     ])
