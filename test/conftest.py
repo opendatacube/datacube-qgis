@@ -1,10 +1,12 @@
 import pytest
 
 from contextlib import contextmanager
+import os
 from osgeo import gdal
 from pathlib import Path
 from datetime import datetime
 import numpy as np
+
 
 @pytest.fixture
 def data_path():
@@ -12,12 +14,14 @@ def data_path():
 
 
 @pytest.fixture
-@contextmanager
-def shut_gdal_up():
-    """ Turn off stderr spam """
-    gdal.PushErrorHandler('CPLQuietErrorHandler')
-    yield
-    gdal.PopErrorHandler()
+def environ():
+    @contextmanager
+    def _environ(env_dict):
+        oldenv = os.environ.copy()
+        os.environ.update(env_dict)
+        yield
+        os.environ = oldenv
+    return _environ
 
 
 @pytest.fixture
@@ -39,4 +43,13 @@ def fake_data_2x2x2():
         'dims': {'time': 2, 'x': 2, 'y': 2}
     }
     return fake_data
+
+
+@pytest.fixture
+@contextmanager
+def shut_gdal_up():
+    """ Turn off stderr spam """
+    gdal.PushErrorHandler('CPLQuietErrorHandler')
+    yield
+    gdal.PopErrorHandler()
 

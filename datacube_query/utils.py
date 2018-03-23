@@ -3,6 +3,7 @@ from datetime import datetime
 
 import dask.array
 import numpy as np
+from osgeo import gdal  # rasterio can't calc stats... - https://github.com/mapbox/rasterio/issues/244
 import pandas as pd
 from pathlib import Path
 import rasterio as rio
@@ -95,6 +96,29 @@ def build_query(
 
     return query
 
+
+def calculate_statistics(filepath, approx_ok=True):
+    """
+    Calculate min,max,mean,std
+
+    :param str filepath:
+    :param bool approx_ok: Use faster approximate stats
+    :return: Dataset statistics, nested lists of per band stats
+             [[min, max, mean, std], [min, max, mean, std], etc...]
+    :rtype: list[list[float]]
+    """
+    gdal.UseExceptions()
+    try:
+        ds = gdal.OpenEx(filepath, gdal.GA_Update)
+    except AttributeError:  # gdal <= 2.0 (gdal.Open works but is deprecated in 2.x)
+        ds = gdal.Open(filepath, gdal.GA_Update)
+
+    stats = []
+    for i in range(ds.RasterCount):
+        stats.append(ds.GetRasterBand(i + 1).ComputeStatistics(approx_ok))
+    del ds
+
+    return stats
 
 def datetime_to_str(datetime64, str_format='%Y-%m-%d'):
     """

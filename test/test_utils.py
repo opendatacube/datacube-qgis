@@ -28,7 +28,7 @@ def test_build_overviews(data_path):
         with rio.open(str(tmp_raster)) as test_raster, rio.open(str(with_ovr)) as known_raster:
             test_checksums = [test_raster.checksum(i) for i in test_raster.indexes]
             known_checksums = [known_raster.checksum(i) for i in known_raster.indexes]
-            assert test_checksums == known_checksums # [14157, 14592, 14233]
+            assert test_checksums == known_checksums  # [14157, 14592, 14233]
 
 
 def test_build_query():
@@ -41,6 +41,23 @@ def test_build_query():
                                                   known_query['time'], extent, known_query['crs'])
 
     assert known_query == test_query
+
+
+def test_calculate_statistics(data_path, shut_gdal_up):
+    with pytest.raises(Exception), shut_gdal_up:
+        datacube_query.utils.calculate_statistics('foo')
+
+    filepath = Path(data_path,'test_without_ovr.tif')
+    with tempfile.TemporaryDirectory() as tempdir:
+        tmp_raster = Path(tempdir, filepath.name)
+        # noinspection PyTypeChecker
+        shutil.copy(filepath, tmp_raster)
+        expected = np.array([
+            [148.0, 1184.0, 294.232, 94.750],
+            [258.0, 1479.0, 500.683, 150.116],
+            [208.0, 1615.0, 493.837, 164.319]])
+        got = np.array(datacube_query.utils.calculate_statistics(str(tmp_raster)))
+        assert np.allclose(got, expected)
 
 
 def test_datetime_to_str():
