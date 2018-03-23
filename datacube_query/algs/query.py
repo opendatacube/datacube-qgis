@@ -254,7 +254,8 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         output_layers = self.execute(
             products, date_range, extent, extent_crs,
             output_crs, output_res, output_netcdf, output_folder,
-            config_file, dask_chunks, overviews, gtiff_options, gtiff_ovr_options,
+            config_file, dask_chunks, overviews, calc_stats, approx_ok,
+            gtiff_options, gtiff_ovr_options,
             group_by, fuse_func, max_datasets, feedback)
 
         results = {self.OUTPUT_FOLDER: output_folder, self.OUTPUT_LAYERS: output_layers.keys()}
