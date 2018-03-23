@@ -9,8 +9,8 @@ A QGIS 3 processing plugin to query and return data in GeoTIFF format from an Op
 
 Users
 -----
-`Documentation <https://datacube-qgis.readthedocs.io>`_
-.......................................................
+Documentation `datacube-qgis.readthedocs.io <https://datacube-qgis.readthedocs.io>`_
+....................................................................................
 
 Developers
 ----------
