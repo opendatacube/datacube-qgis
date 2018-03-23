@@ -9,21 +9,8 @@ A QGIS 3 processing plugin to query and return data in GeoTIFF format from an Op
 
 Users
 -----
-`User documentation <https://datacube-qgis.readthedocs.io>`_
-............................................................
-
-.. Installation
-............
-.. `Installation instructions <doc/installation.rst>`_.
-..
-.. Settings
-........
-.. `Settings information <doc/settings.rst>`_.
-
-.. Algorithms
-..........
-.. `Data Cube Query Algorithm <doc/algs/datacubequeryalgorithm.rst>`_.
-
+`Documentation <https://datacube-qgis.readthedocs.io>`_
+.......................................................
 
 Developers
 ----------
