@@ -1,17 +1,19 @@
 Installation
 ------------
 
-Prerequisites
-~~~~~~~~~~~~~
-- A populated and running local `Open Data Cube`_
-  instance [1]_
-
 Australian NCI users
 ~~~~~~~~~~~~~~~~~~~~
 The plugin is installed in a QGIS environment on the NCI. See the `DEA documentation`_ for more details
 
+
+Prerequisites
+~~~~~~~~~~~~~
+- `QGIS`_ 3
+- A populated and running local `Open Data Cube`_
+  instance [1]_
+
 Linux
-~~~~~
+.....
 Installation with `pip`_:
 
 - Install `QGIS`_ 3 via your distribution package manager
@@ -33,7 +35,7 @@ Installation with `conda`_:
         $ qgis
 
 Windows
-~~~~~~~
+.......
 
 Installation with `OSGeo4W`_
 
@@ -52,8 +54,8 @@ Installation with `OSGeo4W`_
     Note: You *may* need to install updated GDAL, numpy and pandas from the above site.
 
 
-All
-~~~
+Plugin
+~~~~~~
 
 - Download the latest `release`_ of the plugin
 - Install the plugin in QGIS using `Plugins | Manage and Install Plugins... | Install from ZIP`
