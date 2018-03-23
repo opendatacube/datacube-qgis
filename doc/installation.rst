@@ -9,6 +9,7 @@ The plugin is installed in a QGIS environment on the NCI. See the `DEA documenta
 Prerequisites
 ~~~~~~~~~~~~~
 - `QGIS`_ 3
+- datacube-core python package
 - A populated and running local `Open Data Cube`_
   instance [1]_
 
