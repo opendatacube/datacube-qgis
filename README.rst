@@ -9,17 +9,20 @@ A QGIS 3 processing plugin to query and return data in GeoTIFF format from an Op
 
 Users
 -----
-Installation
+`User documentation <https://datacube-qgis.readthedocs.io>`_
+............................................................
+
+.. Installation
 ............
-`Installation instructions <doc/installation.rst>`_.
-
-Settings
+.. `Installation instructions <doc/installation.rst>`_.
+..
+.. Settings
 ........
-`Settings information <doc/settings.rst>`_.
+.. `Settings information <doc/settings.rst>`_.
 
-Algorithms
+.. Algorithms
 ..........
-`Data Cube Query Algorithm <doc/algs/datacubequeryalgorithm.rst>`_.
+.. `Data Cube Query Algorithm <doc/algs/datacubequeryalgorithm.rst>`_.
 
 
 Developers
@@ -29,7 +32,29 @@ The Data Cube plugin is a processing plugin as opposed to a docked or panel type
 This was done to reduce PyQt UI development, but it is a little restrictive for future development (of
 user interface features).
 
-There is scope to add more tools (processing algorithms) to the toolbox (provider).
+There is scope to add more tools (processing algorithms) to the toolbox (provider).  This can be done by
+writing a ``datacube_query.algs`` class that subclasses ``datacube_query.algs.__base__.BaseAlgorithm``,
+importing that class in ``datacube_query.provider`` and appending the class to
+``datacube_query.provider.DataCubeQueryProvider.algs``.
+
+Building and testing
+....................
+There are some make files (win and *nix) to run tests and build a zipped plugin and/or static docs.
+
+::
+    make        # default target, will run make clean, make doc and make build
+    make build  # build the plugin from the current source tree
+    make doc    # build the static docs
+    make clean  # explicitly clean up the source tree
+    make test   # run the tests
+
+
+Documentation
+.............
+There's no API documentation as such. The plugin code is only meant to be used from a GUI, but the code is fairly well
+commented.  The user docs are static HTML included with the zipped plugin file, and also are automatically
+built at `datacube-qgis.readthedocs.io <https://datacube-qgis.readthedocs.io>`_ from a commit hook to
+the github repo.
 
 Links
 .....
@@ -41,19 +66,3 @@ There isn't a great deal of QGIS 3 plugin development documentation yet.  Some l
  - `Plugin migration to QGIS 3 <https://github.com/qgis/QGIS/wiki/Plugin-migration-to-QGIS-3>`_
  - `Core QGIS Processing source <https://github.com/qgis/QGIS/tree/master/python/plugins/processing>`_
 
-Building and testing
-....................
-There are some make files (win and *nix) to run tests and build a zipped plugin and/or static docs.
-
-    make        # default target, will run make clean, make doc and make build
-    make build  # build the plugin from the current source tree
-    make doc    # build the static docs
-    make clean  # explicitly clean up the source tree
-    make test   # run the tests
-
-Documentation
-.............
-There's no API doc as such. The plugin code is only meant to be used from a GUI, but the code is fairly well
-commented.  The user docs are static HTML included with the zipped plugin file, and also are automatically
-built at `datacube-qgis.readthedocs.io <https://datacube-qgis.readthedocs.io>`_ from a commit hook to
-the github repo.
