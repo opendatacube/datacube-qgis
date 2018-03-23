@@ -28,6 +28,7 @@ from ..qgisutils import (get_icon)
 from ..utils import (
     build_overviews,
     build_query,
+    calculate_statistics,
     datetime_to_str,
     get_products_and_measurements,
     run_query,
@@ -213,6 +214,8 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         gtiff_options = json.loads(settings['datacube_gtiff_options'])
         gtiff_ovr_options = json.loads(settings['datacube_gtiff_ovr_options'])
         overviews = settings['datacube_build_overviews']
+        calc_stats = settings['datacube_calculate_statistics']
+        approx_ok = settings['datacube_approx_statistics']
 
         # Parameters
         product_descs = self.parameterAsString(parameters, self.PARAM_PRODUCTS, context)
@@ -262,7 +265,8 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
     def execute(self,
                 products, date_range, extent, extent_crs,
                 output_crs, output_res, output_netcdf, output_folder,
-                config_file, dask_chunks, overviews, gtiff_options, gtiff_ovr_options,
+                config_file, dask_chunks, overviews, calc_stats, approx_ok,
+                gtiff_options, gtiff_ovr_options,
                 group_by, fuse_func, max_datasets, feedback):
 
         output_layers = {}
@@ -330,6 +334,9 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
                     if overviews:
                         build_overviews(raster_path, gtiff_ovr_options)
+
+                    if calc_stats:
+                        calculate_statistics(raster_path, approx_ok)
 
                     lyr_name = basename.format(ds)
                     output_layers[raster_path] = lyr_name

@@ -27,35 +27,44 @@ class DataCubeQueryProvider(QgsProcessingProvider):
         self.settings = []
 
     def load(self):
-
+        # Setting descs prefixed with number as processing framework sorts alphabetically by desc
         self.settings = [
             Setting(SETTINGS_GROUP,
                     'datacube_config_file',
-                    self.tr("Open Data Cube database config file"),
+                    self.tr("1. Open Data Cube database config file"),
                     default='',
                     valuetype=Setting.FILE),
             Setting(SETTINGS_GROUP,
                     'datacube_max_datasets',
-                    self.tr("Maximum datasets to load in a query"),
+                    self.tr("2. Maximum datasets to load in a query"),
                     default=500,
                     valuetype=Setting.INT),
             Setting(SETTINGS_GROUP,
-                    'datacube_build_overviews',
-                    self.tr("Build GeoTiff Overviews"),
-                    default=True,
-                    valuetype=None),
-            Setting(SETTINGS_GROUP,
                     'datacube_gtiff_options',
-                    self.tr("GeoTiff Creation Options"),
+                    self.tr("3. GeoTiff Creation Options"),
                     default=json.dumps(GTIFF_DEFAULTS),
                     valuetype=Setting.STRING),
             Setting(SETTINGS_GROUP,
+                    'datacube_build_overviews',
+                    self.tr("4. Build GeoTiff Overviews"),
+                    default=True,
+                    valuetype=None),
+            Setting(SETTINGS_GROUP,
                     'datacube_gtiff_ovr_options',
-                    self.tr("GeoTiff Overview Options"),
+                    self.tr("5. GeoTiff Overview Options"),
                     default=json.dumps(GTIFF_OVR_DEFAULTS),
                     valuetype=Setting.STRING),
+            Setting(SETTINGS_GROUP,
+                    'datacube_calculate_statistics',
+                    self.tr("6. Calculate GeoTiff statistics"),
+                    default=True,
+                    valuetype=None),
+            Setting(SETTINGS_GROUP,
+                    'datacube_approx_statistics',
+                    self.tr("7. Statistics will be calculated approximately (faster)"),
+                    default=True,
+                    valuetype=None),
         ]
-
 
         ProcessingConfig.settingIcons[DataCubeQueryProvider.NAME] = self.icon()
         for setting in self.settings:
