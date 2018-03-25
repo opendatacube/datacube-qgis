@@ -1,0 +1,13 @@
+name: datacube-qgis
+channels:
+- ceholden #TESTING only until conda-forge are able to package QGIS 3.0
+- conda-forge/label/dev
+- conda-forge
+- defaults
+- nodefaults
+dependencies:
+- datacube
+- python = 3.6
+- qgis >= 3.0
+- rasterio >= 0.9
+- pytest
