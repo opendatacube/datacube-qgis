@@ -28,5 +28,17 @@ install:
   - df -i
 
 script:
-  - python setup.py pytest
+- make test
 
+before_deploy:
+- make
+
+deploy:
+  provider: releases
+  api_key:
+    secure: AkdnqHzJJ3XhVyJHeGjp945bUEo3InEyYPu0zs+Yv4Nvs/SPArwW01ZZ8arfGnBmRAZdd/X0b2PydZJkqcIQzGeRGCFL5rvi4r6FSzq49Q6SU4vvBAVvSQmCfWHKzDC6Z/0kLYtuHhK2dKssJHeDqXQid2XwixCQntmccZqNmRhGf7BoV8+1+DrviIA75isMjzl82MxhozH8UF7m/+IAfjephLQ5Q+k+0jyb7sMkGHMQIzOIyRdAI3LTwmNbkFfzidbKEoSQvVzaxQUcLbjxEzK6rJZotukhK1uw4Dd8MZ03BC+DWDPb9UmgZJZ9KdtP8dJCg4ROGVTJllcSOe7IrSxo8Db+l1tAU/KgbFq52rL91FRnKYoVC7BmPffpmKND3426u5Gu5EhGKMtLvE+yatQ9f4NGeVfIW1X5tTvtu9yZKQ8aG5+6r5WTg8GQGODzQa947CNrUL0OzAzpsUKgofGyIcnPKr/XP8LPe9puQ/qt8X9HC+LeP4KcspSqUavELmnDxl+nf8F1hp2dqKL0qatWYPDeuqxT2AeX4CyVz6PzKSAje9VcYKlI7Y8oORYMYNJHYPwjK6Ig7GqpyMIiSV5QmQ0glL9jlsouTFTTV8OyWq8B2j9EwKt8pnXSEk7CYeMVPEGFZjxt5lbTCX8epvVBey1kT+oO8FwpZqu2r+g=
+  file: dist/datacube_query.zip
+  skip_cleanup: true
+  on:
+    repo: lpinner/datacube-qgis
+    tags: true

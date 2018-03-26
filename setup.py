@@ -31,7 +31,7 @@ class BuildPluginCommand(build_py.build_py):
     def run(self):
         super().run()
         plugin_dir = Path(self.plugin_dir).resolve()
-        basename = '{}-{}'.format(self.distribution.metadata.name, self.distribution.metadata.version)
+        basename = self.distribution.metadata.name
         self.mkpath(str(plugin_dir))
         self.make_archive(plugin_dir/basename, 'zip', self.build_lib)
         # shutil.rmtree(self.build_lib)

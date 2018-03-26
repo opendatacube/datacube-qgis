@@ -1,13 +1,22 @@
 name: datacube-qgis
 channels:
-- ceholden #TESTING only until conda-forge are able to package QGIS 3.0
+- ceholden  # TODO TESTING only until conda-forge are able to package QGIS 3.0 - https://github.com/conda-forge/qgis-feedstock/issues/17
 - conda-forge/label/dev
 - conda-forge
 - defaults
 - nodefaults
 dependencies:
+- dask[array]
 - datacube
+- gdal >= 1.9
+- pytest
+- numpy
+- pandas
 - python = 3.6
 - qgis >= 3.0
 - rasterio >= 0.9
-- pytest
+- setuptools
+- sphinx
+- xarray
+- pip:
+  - sphinx_rtd_theme >= 0.2.5
