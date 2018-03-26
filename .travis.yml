@@ -17,15 +17,16 @@ install:
   - hash -r
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
-  # Useful for debugging any issues with conda
-  - conda info -a
 
   - conda env create -q --force -f .travis/environment.yml
   - source activate datacube-qgis
+  - export PYTHONPATH=$CONDA_PREFIX/share/qgis/python/plugins/processing:$CONDA_PREFIX/share/qgis/python:$PYTHONPATH
+  # Useful for debugging any issues with conda
+  - conda info -a
 
   # Check disk usage
-  - df -h
-  - df -i
+  # - df -h
+  # - df -i
 
 script:
 - make test
