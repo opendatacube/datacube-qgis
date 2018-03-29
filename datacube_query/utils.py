@@ -386,9 +386,6 @@ def write_geotiff(dataset, filename, time_index=None, profile_override=None, ove
             else:
                 data = data.isel(time=time_index).data
 
-            if isinstance(data, dask.array.Array):
-                data = data.compute()
-
             dest.write(data, bandnum)
 
 
