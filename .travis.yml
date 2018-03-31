@@ -1,5 +1,5 @@
 dist: trusty
-sudo: false  # Use the new travis docker based infrastructure
+sudo: true  # Use the new travis docker based infrastructure
 
 git:
   # We need a deeper depth for 'git descibe' to ensure
