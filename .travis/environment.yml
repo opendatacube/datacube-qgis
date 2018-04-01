@@ -1,9 +1,9 @@
 name: datacube-qgis
 channels:
-# - defaults
 - ceholden  # TODO TESTING only until conda-forge are able to package QGIS 3.0 - https://github.com/conda-forge/qgis-feedstock/issues/17
 - conda-forge/label/dev
 - conda-forge
+- defaults
 - nodefaults
 dependencies:
 - dask[array]
