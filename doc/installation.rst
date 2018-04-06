@@ -74,4 +74,4 @@ Plugin
 .. _pip: https://packaging.python.org/tutorials/installing-packages
 .. _QGIS: https://qgis.org/en/site/forusers/alldownloads.html#linux
 .. _release: https://github.com/opendatacube/datacube-qgis/releases
-.. _DEA documentation: https://github.com/opendatacube/dea-datacube-qgis
+.. _DEA documentation: https://github.com/GeoscienceAustralia/digitalearthau
