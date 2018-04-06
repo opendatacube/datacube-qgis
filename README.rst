@@ -1,6 +1,8 @@
 Open Data Cube QGIS Plugin
 ==========================
 
+|Build Status| |Documentation Status|
+
 A QGIS 3 processing plugin to query and return data in GeoTIFF format from an Open Data Cube.
 
 .. contents:: **Contents**
@@ -53,3 +55,7 @@ There isn't a great deal of QGIS 3 plugin development documentation yet.  Some l
  - `Plugin migration to QGIS 3 <https://github.com/qgis/QGIS/wiki/Plugin-migration-to-QGIS-3>`_
  - `Core QGIS Processing source <https://github.com/qgis/QGIS/tree/master/python/plugins/processing>`_
 
+.. |Build Status| image:: https://travis-ci.org/opendatacube/datacube-qgis.svg?branch=master
+   :target: https://travis-ci.org/opendatacube/datacube-qgis
+.. |Documentation Status| image:: https://readthedocs.org/projects/datacube-qgis/badge/?version=latest
+   :target: http://datacube-qgis.readthedocs.org/en/latest/
