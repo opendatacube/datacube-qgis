@@ -7,8 +7,8 @@ version={version}
 author=Luke Pinner
 email=lpinner@users.noreply.github.com
 about=Query and view data stored in an Open Data Cube (https://www.opendatacube.org).
-tracker=https://github.com/lpinner/datacube-qgis/issues
-repository=https://github.com/lpinner/datacube-qgis
+tracker=https://github.com/opendatacube/datacube-qgis/issues
+repository=https://github.com/opendatacube/datacube-qgis
 
 # Recommended items:
 
@@ -18,7 +18,7 @@ repository=https://github.com/lpinner/datacube-qgis
 # Tags are comma separated with spaces allowed
 tags=remote sensing, raster
 
-homepage=https://github.com/lpinner/datacube-qgis
+homepage=https://github.com/opendatacube/datacube-qgis
 category=Analysis
 icon=icons/opendatacube.png
 # experimental flag

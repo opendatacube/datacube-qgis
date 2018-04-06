@@ -41,5 +41,5 @@ deploy:
   file: dist/datacube_query.zip
   skip_cleanup: true
   on:
-    repo: lpinner/datacube-qgis
+    repo: opendatacube/datacube-qgis
     tags: true

@@ -100,7 +100,7 @@ def main():
         version=version,
         cmdclass=cmdclass,
         python_requires='>=3.5.2',
-        url='https://github.com/lpinner/datacube_query',
+        url='https://github.com/opendatacube/datacube-qgis',
         author=config['general']['author'],
         maintainer=config['general']['author'],
         maintainer_email=config['general']['email'],

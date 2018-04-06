@@ -73,5 +73,5 @@ Plugin
 .. _OSGeo4W:  https://trac.osgeo.org/osgeo4w
 .. _pip: https://packaging.python.org/tutorials/installing-packages
 .. _QGIS: https://qgis.org/en/site/forusers/alldownloads.html#linux
-.. _release: https://github.com/lpinner/datacube-qgis/releases
-.. _DEA documentation: https://github.com/lpinner/dea-datacube-qgis
+.. _release: https://github.com/opendatacube/datacube-qgis/releases
+.. _DEA documentation: https://github.com/opendatacube/dea-datacube-qgis
