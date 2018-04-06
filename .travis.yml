@@ -1,5 +1,5 @@
 dist: trusty
-sudo: required 
+sudo: false  # Use the new travis docker based infrastructure
 
 git:
   # We need a deeper depth for 'git descibe' to ensure
@@ -21,14 +21,16 @@ install:
   - conda env create -q --force -f .travis/environment.yml
   - source activate datacube-qgis
   - export PYTHONPATH=$CONDA_PREFIX/share/qgis/python/plugins/processing:$CONDA_PREFIX/share/qgis/python:$PYTHONPATH
+
   # Useful for debugging any issues with conda
   - conda info -a
 
   # Check disk usage
-  # - df -h
-  # - df -i
+  - df -h
+  - df -i
 
 script:
+- export  QT_QPA_PLATFORM=offscreen
 - make test
 
 before_deploy:
