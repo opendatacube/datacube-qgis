@@ -12,7 +12,7 @@ Open Data Cube database config file
     Path to an Open Data Cube
     `config file <http://datacube-core.readthedocs.io/en/stable/ops/db_setup.html#create-configuration-file>`_.
     If not set, the Open Data Cube library will look for a config file in some
-    `default locations <http://datacube-core.readthedocs.io/en/stable/ops/config.html#runtime-config-doc>`_.
+    `default locations <http://datacube-core.readthedocs.io/en/stable/user/config.html#runtime-config-doc>`_.
 
 Maximum datasets to load in a query
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
