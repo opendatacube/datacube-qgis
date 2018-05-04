@@ -3,6 +3,7 @@ from datetime import datetime
 import json
 from pathlib import Path
 
+from datacube.utils import geometry
 from sqlalchemy.exc import SQLAlchemyError
 
 from processing.core.parameters import (
@@ -88,10 +89,29 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
             if date_range[0] >  date_range[1]:
                 msgs += ['The start date must be earlier than the end date']
 
-        output_crs = self.parameterAsCrs(parameters, self.PARAM_OUTPUT_CRS, context).isValid()
+        extent = self.parameterAsExtent(parameters, self.PARAM_EXTENT, context)  # QgsRectangle
+        extent_crs = self.parameterAsExtentCrs(parameters, self.PARAM_EXTENT, context).authid()  # QgsCoordinateReferenceSystem
+        extent = [extent.xMinimum(), extent.yMinimum(), extent.xMaximum(), extent.yMaximum()]
+        extent_crs = None if not extent_crs else extent_crs
+        # Assume 4326 if within [-180,-90,180,90] and CRS not set
+        if extent_crs is None:
+            if not (extent[0] >= -180 and extent[1] >= -90 and extent[2] <= 180 and extent[3] <= 90):
+                msgs += ['Please set a valid EPSG CRS for your project/layer']
+        else:
+            try:
+                geometry.CRS(extent_crs)
+            except geometry.InvalidCRSError:
+                msgs += ['Please set a valid EPSG CRS for your project/layer']
+
+        output_crs = self.parameterAsCrs(parameters, self.PARAM_OUTPUT_CRS, context)
         output_res = self.parameterAsDouble(parameters, self.PARAM_OUTPUT_RESOLUTION, context)
-        if output_crs and not output_res:
-            msgs += ['Please specify "Output Resolution" when specifying "Output CRS"']
+        if output_crs.isValid():
+            if not output_res:
+                msgs += ['Please specify "Output Resolution" when specifying "Output CRS"']
+            try:
+                geometry.CRS(output_crs.authid())
+            except geometry.InvalidCRSError:
+                msgs += ['Please set a valid EPSG "Output CRS"']
 
         if msgs:
             return False, self.tr('\n'.join(msgs))
@@ -114,7 +134,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
     def flags(self):
         # Default is FlagCanCancel | FlagSupportsBatch
         # but this alg looks bad in batch mode because of the big tree widget.
-        # Not sure why, but setting this doesn't actually 
+        # Not sure why, but setting this doesn't actually
         # stop the "Run As Batch Process..." button from being shown.
 
         # return self.FlagCanCancel
@@ -233,6 +253,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         extent = [extent.xMinimum(), extent.yMinimum(), extent.xMaximum(), extent.yMaximum()]
         extent_crs = self.parameterAsExtentCrs(parameters, self.PARAM_EXTENT, context)  # QgsCoordinateReferenceSystem
         extent_crs = extent_crs.authid()
+        extent_crs = None if not extent_crs else extent_crs
 
         # FIXME - Temporarily disable NetCDF - https://gis.stackexchange.com/q/271525/2856
         # output_netcdf = self.parameterAsBool(parameters, self.PARAM_FORMAT, context)
