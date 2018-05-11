@@ -30,6 +30,7 @@ Building and testing
 ....................
 There are some make files (win and *nix) to run tests and build a zipped plugin and/or static docs.
 
+.. code-block::
 
     make        # default target, will run make clean, make doc and make build
     make build  # build the plugin from the current source tree
