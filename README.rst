@@ -50,9 +50,9 @@ Links
 .....
 
 There isn't a great deal of QGIS 3 plugin development documentation yet.  Some links below:
- - `QGIS Python API <http://python.qgis.org/api/index.html>`_
+ - `QGIS Python API <https://qgis.org/pyqgis/3.0/>`_
  - `QGIS Plugin Builder plugin <https://github.com/g-sherman/Qgis-Plugin-Builder/tree/qgis3_version>`_ (qgis3 source version, not released on QGIS Plugins repo)
- - `Rough beginnings of processing algorithm porting guide <https://github.com/qgis/QGIS/pull/4841>`_
+ - `QGIS processing algorithm porting guide <https://github.com/qgis/QGIS/blob/master/doc/porting_processing.dox>`_
  - `Plugin migration to QGIS 3 <https://github.com/qgis/QGIS/wiki/Plugin-migration-to-QGIS-3>`_
  - `Core QGIS Processing source <https://github.com/qgis/QGIS/tree/master/python/plugins/processing>`_
 
