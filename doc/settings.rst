@@ -36,7 +36,7 @@ GeoTiff Creation Options
 :Type: JSON
 :Notes:
     A valid JSON string that contains ``rasterio``
-    `creation options <https://mapbox.github.io/rasterio/topics/image_options.html#creation-options>`_.
+    `creation options <https://rasterio.readthedocs.io/en/latest/topics/image_options.html?highlight=options#creation-options>`_.
 :Default:
     ``{"driver": "GTiff", "interleave": "band", "tiled": true, "blockxsize": 256, "blockysize": 256, "compress": "lzw", "predictor": 1, "tfw": false, "jpeg_quality": 75, "profile": "GDALGeoTIFF", "bigtiff": "IF_NEEDED", "geotiff_keys_flavor": "STANDARD", "photometric": "RGBA"}``
 
@@ -45,6 +45,6 @@ GeoTiff Overview Options
 :Type: JSON
 :Notes:
     A valid JSON string to configure ``rasterio``
-    `overviews <https://mapbox.github.io/rasterio/topics/overviews.html>`_.
+    `overviews <https://rasterio.readthedocs.io/en/latest/topics/overviews.html>`_.
 :Default:
     ``{"resampling": "average", "factors": [2, 4, 8, 16, 32], "internal_storage": true}``
