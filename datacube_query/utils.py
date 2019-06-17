@@ -1,7 +1,7 @@
 from collections import defaultdict
 from datetime import datetime
 
-import dask.array
+import dask.array as da
 import numpy as np
 from osgeo import gdal  # rasterio can't calc stats... - https://github.com/mapbox/rasterio/issues/244
 import pandas as pd
@@ -11,7 +11,7 @@ from rasterio.dtypes import check_dtype
 
 import datacube
 from datacube.api.query import Query
-from datacube.storage.storage import write_dataset_to_netcdf as _write_dataset_to_netcdf
+from datacube.helpers import write_geotiff as _write_geotiff
 
 from .defaults import (
     GTIFF_OVR_DEFAULTS,
@@ -120,6 +120,7 @@ def calculate_statistics(filepath, approx_ok=True):
 
     return stats
 
+
 def datetime_to_str(datetime64, str_format='%Y-%m-%d'):
     """
     Convert a numpy.datetime64 to a string
@@ -137,6 +138,33 @@ def datetime_to_str(datetime64, str_format='%Y-%m-%d'):
 
     dt = datetime.utcfromtimestamp(dt)
     return dt.strftime(str_format)
+
+
+def get_dtype(dataset):
+    try:
+        dtypes = {val.dtype for val in dataset.data_vars.values()}
+        assert len(dtypes) == 1  # Check for multiple dtypes
+        return dtypes.pop()
+    except AttributeError:
+        return dataset.dtype
+
+
+def get_nodatavals(dataset):
+
+    nodatavals = []
+    for data in dataset.data_vars.values():
+        nodata = get_nodata(data)
+        if nodata is None:
+            return None
+        else:
+            nodatavals.append(nodata)
+    return nodatavals
+
+
+def get_nodata(data):
+
+    if 'nodata' in data.attrs:
+        return data.nodata
 
 
 def get_products_and_measurements(config=None):
@@ -340,71 +368,62 @@ def write_geotiff(dataset, filename, time_index=None, profile_override=None, ove
         raise RuntimeError('Output file exists "{}"'.format(filename))
 
     profile_override = profile_override or {}
+    profile_override = lcase_dict(profile_override)  # Sanitise user modifiable values
 
-    try:
-        dtypes = {val.dtype for val in dataset.data_vars.values()}
-        assert len(dtypes) == 1  # Check for multiple dtypes
-    except AttributeError:
-        dtypes = [dataset.dtype]
-    dtype = dtypes.pop()
+    dtype = get_dtype(dataset)
 
     if not check_dtype(dtype):  # Check for invalid dtypes
         dataset, dtype = upcast(dataset, dtype)
 
-    dimx = dataset.dims[dataset.crs.dimensions[1]]
-    dimy = dataset.dims[dataset.crs.dimensions[0]]
+    if time_index is not None:
+        dataset = dataset.isel(time=time_index)
 
-    profile = GTIFF_DEFAULTS.copy()
+    profile = lcase_dict(GTIFF_DEFAULTS.copy())  # Sanitise user modifiable values
+
+    geobox = getattr(dataset, 'geobox', None)
+    if geobox is None:
+        raise ValueError('Can only write datasets with specified `crs` attribute')
+
+    height, width = geobox.shape
+
+    nodatavals = get_nodatavals(dataset)
+    try:
+        nodata = nodatavals[0]
+    except TypeError:
+        nodata = None
+
     profile.update({
-        'width': dimx,
-        'height': dimy,
-        'transform': dataset.affine,
-        'crs': dataset.crs.crs_str,
+        'width': width,
+        'height': height,
+        'transform': geobox.affine,
+        'crs': geobox.crs.crs_str,
         'count': len(dataset.data_vars),
+        'nodata': nodata,
         'dtype': str(dtype)
     })
     profile.update(profile_override)
-    profile = lcase_dict(profile)
 
-    blockx = profile.get('blockxsize')
-    blocky = profile.get('blockysize')
-    if (blockx and blockx > dimx) or (blocky and blocky > dimy):
-        del profile['blockxsize']
-        del profile['blockysize']
-        profile['tiled'] = False
+    # Block size must be smaller than the image size, and for geotiffs must be divisible by 16
+    if profile['blockxsize'] > profile['width']:
+        if profile['width'] < 16:
+            profile['tiled'] = False
+        else:
+            profile['blockxsize'] = profile['width']//16*16
 
-    with rio.open(str(filename), 'w', **profile) as dest:
-        for bandnum, data in enumerate(dataset.data_vars.values(), start=1):
-            try:
-                nodata = data.nodata
-                profile.update({'nodata': nodata})
-            except AttributeError:
-                pass
+    if profile['blockysize'] > profile['height']:
+        if profile['height'] < 16:
+            profile['tiled'] = False
+        else:
+            profile['blockysize'] = profile['height']//16*16
 
-            if time_index is None:
-                data = data.data
-            else:
-                data = data.isel(time=time_index).data
+    if not profile.get('tiled', False):
+        profile.pop('blockxsize', None)
+        profile.pop('blockysize', None)
 
-            if isinstance(data, dask.array.Array):
-                data = data.compute()
-
-            dest.write(data, bandnum)
-
-
-def write_netcdf(dataset, filename, overwrite=False, *args, **kwargs):
-    """
-    Write an xarray dataset to a NetCDF
-
-    :param str filename: Output filename
-    :param xarray.Dataset dataset: xarray dataset containing multiple bands to write to file
-    :param bool overwrite: Allow overwriting existing files.
-    :param args: Positional arguments to pass to datacube.storage.storage.write_dataset_to_netcdf.
-    :param kwargs: Keyword arguments to pass to datacube.storage.storage.write_dataset_to_netcdf.
-    """
-    filepath = Path(filename)
-
-    if filepath.exists() and overwrite:
-        filepath.unlink()
-
-    _write_dataset_to_netcdf(dataset, filename, *args, **kwargs)
+    with rio.Env():
+        with rio.open(str(filename), 'w', sharing=False, **profile) as dest:
+            if hasattr(dataset, 'data_vars'):
+                for bandnum, data in enumerate(dataset.data_vars.values(), start=1):
+                    if hasattr(data, 'compute'):
+                        data = data.compute()
+                    dest.write(data.values, bandnum)

@@ -266,10 +266,3 @@ def test_write_geotiff(fake_data_2x2x2):
         assert path.exists()
 
 
-def test_write_netcdf(fake_data_2x2x2):
-    data = xr.Dataset.from_dict(fake_data_2x2x2)
-    with tempfile.TemporaryDirectory() as tempdir:
-        path = Path(tempdir, 'test.nc')
-        datacube_query.utils.write_netcdf(data, path)
-
-        assert path.exists()
