@@ -6,6 +6,8 @@ from pathlib import Path
 from datacube.utils import geometry
 from sqlalchemy.exc import SQLAlchemyError
 
+import processing
+
 from processing.core.parameters import (
     QgsProcessingParameterCrs as ParameterCrs,
     QgsProcessingParameterEnum as ParameterEnum,
@@ -34,8 +36,7 @@ from ..utils import (
     get_products_and_measurements,
     run_query,
     update_tags,
-    write_geotiff,
-    write_netcdf
+    write_geotiff
 )
 
 
@@ -53,7 +54,6 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
     # Advanced params
     PARAM_OVERVIEWS = 'Build overviews for output GeoTIFFs?'
-    PARAM_FORMAT = 'Write NetCDF instead of GeoTIFF?'
     PARAM_OUTPUT_CRS = 'Output CRS (required for products with no CRS defined)'
     PARAM_OUTPUT_RESOLUTION = ('Output pixel resolution '
                                '(required for products with no resolution defined)')
@@ -173,11 +173,6 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         self.addParameter(ParameterExtent(self.PARAM_EXTENT,
                                           self.tr(self.PARAM_EXTENT)))
 
-        # FIXME - Temporarily disable NetCDF - https://gis.stackexchange.com/q/271525/2856
-        # param = ParameterBoolean(self.PARAM_FORMAT,
-        #                          self.tr(self.PARAM_FORMAT), defaultValue=False)
-        # self.addParameter(param)
-
         param = ParameterCrs(self.PARAM_OUTPUT_CRS, self.tr(self.PARAM_OUTPUT_CRS), optional=True)
         self.addParameter(param)
 
@@ -216,7 +211,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
     # noinspection PyMethodOverriding
     def processAlgorithm(self, parameters, context, feedback):
         """
-        Collect parameters and execute the query
+        Collect parameterfeedback.setProgressfeedback.setProgressfeedback.setProgresss and execute the query
 
         :param parameters: Input parameters supplied by the processing framework
         :param qgis.core.QgsProcessingContext context:  Threadsafe context in which a processing algorithm is executed
@@ -255,10 +250,6 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         extent_crs = extent_crs.authid()
         extent_crs = None if not extent_crs else extent_crs
 
-        # FIXME - Temporarily disable NetCDF - https://gis.stackexchange.com/q/271525/2856
-        # output_netcdf = self.parameterAsBool(parameters, self.PARAM_FORMAT, context)
-        output_netcdf = False
-
         output_crs = self.parameterAsCrs(parameters, self.PARAM_OUTPUT_CRS, context).authid()
         output_crs = None if not output_crs else output_crs
 
@@ -269,12 +260,18 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         group_by, fuse_func = GROUP_BY_FUSE_FUNC[list(GROUP_BY_FUSE_FUNC.keys())[group_by]]
 
         output_folder = self.parameterAsString(parameters, self.OUTPUT_FOLDER, context)
+        feedback.pushInfo('output_folder: {}'.format(repr(output_folder)))
+
+        # if not output_folder == 'TEMPORARY_OUTPUT':
+        #     output_folder = processing.getTempDirInTempFolder()
+        #     processing.mkdir(output_folder)
+        processing.mkdir(output_folder)
 
         dask_chunks = {'time': 1} if date_range is not None else None
 
         output_layers = self.execute(
             products, date_range, extent, extent_crs,
-            output_crs, output_res, output_netcdf, output_folder,
+            output_crs, output_res, output_folder,
             config_file, dask_chunks, overviews, calc_stats, approx_ok,
             gtiff_options, gtiff_ovr_options,
             group_by, fuse_func, max_datasets, feedback)
@@ -286,7 +283,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
     # noinspection PyTypeChecker
     def execute(self,
                 products, date_range, extent, extent_crs,
-                output_crs, output_res, output_netcdf, output_folder,
+                output_crs, output_res, output_folder,
                 config_file, dask_chunks, overviews, calc_stats, approx_ok,
                 gtiff_options, gtiff_ovr_options,
                 group_by, fuse_func, max_datasets, feedback):
@@ -310,7 +307,8 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
                     output_res, dask_chunks=dask_chunks,
                     group_by=group_by, fuse_func=fuse_func)
 
-                feedback.setProgressText('Query {}'.format(repr(query)))
+                # feedback.setProgressText('Query {}'.format(repr(query)))
+                feedback.pushInfo('Query: {}'.format(repr(query)))
 
                 data = run_query(query, config_file, max_datasets=max_datasets)
 
@@ -324,49 +322,34 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
             basepath = str(Path(output_folder, basename))
 
             feedback.setProgressText('Saving outputs for {}'.format(product))
-            if output_netcdf:
-                start_date = datetime_to_str(data.time[0].data)
-                end_date = datetime_to_str(data.time[-1].data)
-                dt = '{}_{}'.format(start_date, end_date)
-                raster_path = basepath.format(dt) + '.nc'
-                write_netcdf(data, raster_path, overwrite=True)
+            for i, dt in enumerate(data.time):
+                if group_by is None:
+                    ds = datetime_to_str(dt.data, '%Y-%m-%d_%H-%M-%S')
+                    tag = datetime_to_str(dt.data, '%Y:%m:%d %H:%M:%S')
+                else:
+                    ds = datetime_to_str(dt.data)
+                    tag = datetime_to_str(dt.data, '%Y:%m:%d')
 
-                for i, measurement in enumerate(measurements):
-                    nc_path = 'NETCDF:"{}":{}'.format(raster_path, measurement)
-                    layer_name = 'NETCDF:"{}":{}'.format(Path(raster_path).stem, measurement)
-                    output_layers[nc_path] = layer_name
+                raster_path = basepath.format(ds) + '.tif'
 
-                    feedback.setProgress(int((idx * 10 + i + 1) * progress_total))
+                write_geotiff(data, raster_path, time_index=i,
+                              profile_override=gtiff_options, overwrite=True)
 
-            else:
-                for i, dt in enumerate(data.time):
-                    if group_by is None:
-                        ds = datetime_to_str(dt.data, '%Y-%m-%d_%H-%M-%S')
-                        tag = datetime_to_str(dt.data, '%Y:%m:%d %H:%M:%S')
-                    else:
-                        ds = datetime_to_str(dt.data)
-                        tag = datetime_to_str(dt.data, '%Y:%m:%d')
+                update_tags(raster_path, TIFFTAG_DATETIME=tag)
 
-                    raster_path = basepath.format(ds) + '.tif'
+                if overviews:
+                    build_overviews(raster_path, gtiff_ovr_options)
 
-                    write_geotiff(data, raster_path, time_index=i,
-                                  profile_override=gtiff_options, overwrite=True)
+                if calc_stats:
+                    calculate_statistics(raster_path, approx_ok)
 
-                    update_tags(raster_path, TIFFTAG_DATETIME=tag)
+                lyr_name = basename.format(ds)
+                output_layers[raster_path] = lyr_name
 
-                    if overviews:
-                        build_overviews(raster_path, gtiff_ovr_options)
+                feedback.setProgress(int((idx * 10 + i + 1) * progress_total))
 
-                    if calc_stats:
-                        calculate_statistics(raster_path, approx_ok)
-
-                    lyr_name = basename.format(ds)
-                    output_layers[raster_path] = lyr_name
-
-                    feedback.setProgress(int((idx * 10 + i + 1) * progress_total))
-
-                    if feedback.isCanceled():
-                        return output_layers
+                if feedback.isCanceled():
+                    return output_layers
 
             feedback.setProgress(int((idx + 1) * 10 * progress_total))
 
