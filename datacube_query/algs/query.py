@@ -262,9 +262,6 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
         output_folder = self.parameterAsString(parameters, self.OUTPUT_FOLDER, context)
         feedback.pushInfo('output_folder: {}'.format(repr(output_folder)))
 
-        # if not output_folder == 'TEMPORARY_OUTPUT':
-        #     output_folder = processing.getTempDirInTempFolder()
-        #     processing.mkdir(output_folder)
         processing.mkdir(output_folder)
 
         dask_chunks = {'time': 1} if date_range is not None else None
