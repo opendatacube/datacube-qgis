@@ -5,7 +5,6 @@ from pathlib import Path
 
 from datacube.utils import geometry
 from sqlalchemy.exc import SQLAlchemyError
-
 import processing
 
 from processing.core.parameters import (
@@ -309,8 +308,7 @@ class DataCubeQueryAlgorithm(BaseAlgorithm):
 
                 data = run_query(query, config_file, max_datasets=max_datasets)
 
-            except (NoDataError, TooManyDatasetsError) as err:
-                # feedback.pushInfo('{}'.format(err))
+            except (NoDataError, TooManyDatasetsError, OSError) as err:
                 feedback.reportError('Error encountered processing {}: {}'.format(product, err))
                 feedback.setProgress(int((idx + 1) * 10 * progress_total))
                 continue
